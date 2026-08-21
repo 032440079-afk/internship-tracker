@@ -80,7 +80,7 @@ def scrape() -> list[dict]:
 
         for page_num in range(MAX_PAGES):
             url = BASE_URL if page_num == 0 else f"{BASE_URL}?page={page_num}"
-            page.goto(url, wait_until="networkidle", timeout=30000)
+            page.goto(url, wait_until="domcontentloaded", timeout=45000)
 
             # Cookie banner çıkarsa kapatmayı dene (ilk sayfada olabilir)
             try:
