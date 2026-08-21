@@ -4,12 +4,18 @@ Hollanda staj ilanları. Site statik/server-rendered HTML kullanıyor
 (SPA değil), bu yüzden requests + BeautifulSoup ile büyük ihtimalle
 doğrudan çalışır. Yine de CSS selector'ları canlı denemeyle doğrulanmalı.
 """
+import re
 import requests
 from bs4 import BeautifulSoup
 
 from lib.config import REQUEST_HEADERS
 
 BASE_URL = "https://stageplaza.nl/stage/engineering/"
+
+# Gerçek ilan URL'leri /stage/<sayısal-id>/<slug>/ formatında
+# (örn. /stage/148924/internship-project-management-...).
+# Kategori/şehir/menü sayfaları ise /stage/engineering/ gibi sayı İÇERMİYOR.
+JOB_URL_PATTERN = re.compile(r"^/stage/\d+/")
 
 
 def scrape() -> list[dict]:
@@ -18,18 +24,13 @@ def scrape() -> list[dict]:
     soup = BeautifulSoup(resp.text, "lxml")
 
     offers = []
-
-    # TAHMİNİ selector — sayfadaki ilan kartı linklerini yakalamaya çalışıyor.
-    # Gerçek class isimleri Inspect ile doğrulanınca netleştirilecek.
-    cards = soup.select("a[href*='/stage/']")
-
     seen_urls = set()
-    for card in cards:
+
+    for card in soup.select("a[href]"):
         href = card.get("href", "")
-        if not href or href.rstrip("/") in (
-            "/stage", "/stage/engineering", "/stage/rotterdam"
-        ):
+        if not JOB_URL_PATTERN.match(href):
             continue
+
         url = href if href.startswith("http") else f"https://stageplaza.nl{href}"
         if url in seen_urls:
             continue
