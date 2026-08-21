@@ -15,7 +15,7 @@ BASE_URL = "https://stageplaza.nl/stage/engineering/"
 # Gerçek ilan URL'leri /stage/<sayısal-id>/<slug>/ formatında
 # (örn. /stage/148924/internship-project-management-...).
 # Kategori/şehir/menü sayfaları ise /stage/engineering/ gibi sayı İÇERMİYOR.
-JOB_URL_PATTERN = re.compile(r"^/stage/\d+/")
+JOB_URL_PATTERN = re.compile(r"/stage/\d+/[^/]+/?$")
 
 
 def scrape() -> list[dict]:
@@ -29,7 +29,7 @@ def scrape() -> list[dict]:
 
     for card in soup.select("a[href]"):
         href = card.get("href", "")
-        if not JOB_URL_PATTERN.match(href):
+        if not JOB_URL_PATTERN.search(href):
             continue
 
         url = href if href.startswith("http") else f"https://stageplaza.nl{href}"
