@@ -1,0 +1,29 @@
+name: Daily Internship Scrape
+
+on:
+  schedule:
+    # Her gün UTC 06:00 = Türkiye saatiyle yaz saatinde 09:00 civarı
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}   # Actions sekmesinden manuel de tetiklenebilir
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo'yu çek
+        uses: actions/checkout@v4
+
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Bağımlılıkları kur
+        run: pip install -r requirements.txt
+
+      - name: Scraper'ları çalıştır
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
+        run: python run.py
