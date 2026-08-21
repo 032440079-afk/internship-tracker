@@ -22,6 +22,7 @@ def scrape() -> list[dict]:
     resp = requests.get(BASE_URL, headers=REQUEST_HEADERS, timeout=20)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "lxml")
+    print(f"[debug] status={resp.status_code} len={len(resp.text)}")
 
     offers = []
     seen_urls = set()
