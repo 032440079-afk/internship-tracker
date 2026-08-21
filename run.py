@@ -23,7 +23,7 @@ SCRAPER_MODULES = [
 #     "scrapers.erasmus_careers",  # Cloudflare bloklu, otomasyon dışı - haftada bir manuel kontrol et
     "scrapers.stageplaza",
     # "scrapers.company_bosch",   # gizli API bulunca eklenecek
-    # "scrapers.company_continental",
+        "scrapers.company_continental",
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]
