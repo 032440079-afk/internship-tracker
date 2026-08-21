@@ -88,6 +88,11 @@ def scrape() -> list[dict]:
             except Exception:
                 pass
 
+            try:
+                page.wait_for_selector("div.card.eg-card", timeout=15000)
+            except Exception:
+                pass
+
             html = page.content()
             page_offers = _parse_page_html(html)
 
