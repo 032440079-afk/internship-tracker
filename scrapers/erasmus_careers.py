@@ -93,6 +93,11 @@ def scrape() -> list[dict]:
             except Exception:
                 pass
 
+            if page_num == 0:
+                page.screenshot(path="debug_erasmus_page0.png", full_page=True)
+                print(f"[debug] title={page.title()!r}")
+                print(f"[debug] html_len={len(page.content())}")
+
             html = page.content()
             page_offers = _parse_page_html(html)
 
