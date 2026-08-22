@@ -41,6 +41,23 @@ EXCLUDE_KEYWORDS = [
     "teaching internship",
 ]
 
+# Sadece staj/ogrenci pozisyonlarini kabul etmek icin gerekli anahtar kelimeler
+# (tam zamanli/deneyimli pozisyonlar bu listede yoksa elenir)
+INTERNSHIP_KEYWORDS = [
+    "intern",
+    "internship",
+    "praktikum",
+    "werkstudent",
+    "working student",
+    "trainee",
+    "co-op",
+    "thesis",
+    "abschlussarbeit",
+    "duales studium",
+    "stagiaire",
+    "stajyer",
+]
+
 REQUEST_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
