@@ -24,6 +24,7 @@ SCRAPER_MODULES = [
     "scrapers.stageplaza",
     # "scrapers.company_bosch",   # gizli API bulunca eklenecek
         "scrapers.company_continental",
+    "scrapers.company_successfactors",
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]
