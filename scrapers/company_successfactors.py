@@ -9,8 +9,8 @@ from bs4 import BeautifulSoup
 from lib.config import REQUEST_HEADERS
 
 COMPANIES = [
-    {"name": "Festo", "search_url": "https://jobs.festo.com/search/"},
-    {"name": "ZF", "search_url": "https://jobs.zf.com/search/"},
+        {"name": "Festo", "search_url": "https://jobs.festo.com/search/", "base_url": "https://jobs.festo.com"},
+    {"name": "ZF", "search_url": "https://jobs.zf.com/search/", "base_url": "https://jobs.zf.com"},
 ]
 
 RESULTS_PER_PAGE = 25
@@ -18,7 +18,7 @@ MAX_PAGES = 25
 
 JOB_URL_PATTERN = re.compile(r"/job/")
 
-def _parse_page(html: str, company_name: str):
+def _parse_page(html: str, company_name: str, base_url: str):
     soup = BeautifulSoup(html, "lxml")
     offers = []
     seen = set()
@@ -27,7 +27,7 @@ def _parse_page(html: str, company_name: str):
         href = a.get("href", "")
         if not JOB_URL_PATTERN.search(href):
             continue
-        url = href
+        url = href if href.startswith("http") else f"{base_url}{href}"
         if url in seen:
             continue
         seen.add(url)
@@ -48,7 +48,7 @@ def _parse_page(html: str, company_name: str):
     return offers
 
 
-def _scrape_company(name: str, search_url: str, session: requests.Session):
+def _scrape_company(name: str, search_url: str, base_url: str, session: requests.Session):   
     all_offers = []
     seen_urls = set()
 
@@ -60,7 +60,7 @@ def _scrape_company(name: str, search_url: str, session: requests.Session):
         if resp.status_code != 200:
             break
 
-        page_offers = _parse_page(resp.text, name)
+        page_offers = _parse_page(resp.text, name, base_url)
         new_offers = [o for o in page_offers if o["url"] not in seen_urls]
 
         if not new_offers:
@@ -79,7 +79,7 @@ def scrape() -> list[dict]:
 
     for company in COMPANIES:
         try:
-            offers = _scrape_company(company["name"], company["search_url"], session)
+            offers = _scrape_company(company["name"], company["search_url"], company["base_url"], session)
             all_offers.extend(offers)
         except Exception as e:
             print(f"[HATA] {company['name']} scrape edilemedi: {e}")
