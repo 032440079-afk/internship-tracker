@@ -1,5 +1,5 @@
 """
-Workday tabanli kariyer sitelerini tarar (KION Group).
+Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO).
 
 Workday, kimlik dogrulamasi gerektirmeyen genel bir JSON API sunar:
   POST https://<tenant>.<wd_host>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs
@@ -11,6 +11,12 @@ from lib.config import REQUEST_HEADERS
 
 COMPANIES = [
     {"name": "KION Group", "tenant": "kiongroup", "wd_host": "wd3", "site": "KIONGroup"},
+    {"name": "Roche", "tenant": "roche", "wd_host": "wd3", "site": "roche-ext"},
+    {"name": "Unilever", "tenant": "unilever", "wd_host": "wd3", "site": "Unilever_Experienced_Professionals"},
+    {"name": "Unilever Early Careers", "tenant": "unilever", "wd_host": "wd3", "site": "Unilever_Early_Careers"},
+    {"name": "ASML", "tenant": "asml", "wd_host": "wd3", "site": "ASMLEXT1"},
+    {"name": "Maersk", "tenant": "maersk", "wd_host": "wd3", "site": "Maersk_Careers"},
+    {"name": "LEGO", "tenant": "lego", "wd_host": "wd103", "site": "LEGO_External"},
 ]
 
 RESULTS_PER_PAGE = 20
