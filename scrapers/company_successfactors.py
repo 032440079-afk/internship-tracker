@@ -1,5 +1,5 @@
 """
-SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF).
+SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group).
 Erisilebilir format sayfasi /search/ duz HTML donduruyor.
 """
 import re
@@ -11,6 +11,7 @@ from lib.config import REQUEST_HEADERS
 COMPANIES = [
         {"name": "Festo", "search_url": "https://jobs.festo.com/search/", "base_url": "https://jobs.festo.com"},
     {"name": "ZF", "search_url": "https://jobs.zf.com/search/", "base_url": "https://jobs.zf.com"},
+    {"name": "VW Group", "search_url": "https://jobs.volkswagen-group.com/search/", "base_url": "https://jobs.volkswagen-group.com"},
 ]
 
 RESULTS_PER_PAGE = 25
