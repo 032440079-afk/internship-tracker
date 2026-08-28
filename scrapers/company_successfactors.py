@@ -1,5 +1,5 @@
 """
-SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group).
+SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Jungheinrich).
 Erisilebilir format sayfasi /search/ duz HTML donduruyor.
 """
 import re
@@ -12,6 +12,7 @@ COMPANIES = [
         {"name": "Festo", "search_url": "https://jobs.festo.com/search/", "base_url": "https://jobs.festo.com"},
     {"name": "ZF", "search_url": "https://jobs.zf.com/search/", "base_url": "https://jobs.zf.com"},
     {"name": "VW Group", "search_url": "https://jobs.volkswagen-group.com/search/", "base_url": "https://jobs.volkswagen-group.com"},
+    {"name": "Jungheinrich", "search_url": "https://careers.jungheinrich.com/search/", "base_url": "https://careers.jungheinrich.com"},
 ]
 
 RESULTS_PER_PAGE = 25
