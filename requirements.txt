@@ -5,3 +5,4 @@ firebase-admin==7.5.0
 python-telegram-bot==22.8
 playwright==1.55.0
 playwright-stealth==1.0.6
+setuptools
