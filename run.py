@@ -15,7 +15,7 @@ import argparse
 import importlib
 import traceback
 
-from lib import store, notify
+from lib import store, notify, export_html
 from lib.filters import is_relevant
 
 # Aktif scraper modülleri. Her biri scrapers/ altında, scrape() fonksiyonu içerir.
@@ -76,6 +76,11 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
     print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new}")
 
+    if not dry_run:
+        try:
+            export_html.generate()
+        except Exception as e:
+            print(f"[HATA] export_html basarisiz: {e}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
