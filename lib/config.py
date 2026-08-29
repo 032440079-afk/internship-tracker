@@ -67,6 +67,12 @@ NON_EUROPE_KEYWORDS = [
     "australia", "canada", "south africa", "nigeria", "kenya", "morocco",
     "egypt", "saudi", "uae", "dubai", "qatar", "israel", "pakistan",
     "bangladesh", "sri lanka", "chile", "colombia", "peru",
+    "petaling jaya", "kuala lumpur", "mississauga", "toronto", "vancouver",
+    "montreal", "ontario", "quebec", "san francisco", "boston", "indianapolis",
+    "pleasanton", "santa clara", "shanghai", "beijing", "seoul", "tokyo",
+    "osaka", "sydney", "melbourne", "auckland", "manila", "jakarta",
+    "bangkok", "ho chi minh", "hanoi", "mumbai", "bangalore", "delhi",
+    "sao paulo", "rio de janeiro", "mexico city", "hyderabad", "pune",
 ]
 
 REQUEST_HEADERS = {
