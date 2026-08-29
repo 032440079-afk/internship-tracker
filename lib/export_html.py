@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timezone
 from lib import store
-
+from lib.filters import is_europe_location
 OUTPUT_PATH = "docs/index.html"
 
 def _fetch_all_offers() -> list[dict]:
@@ -18,6 +18,8 @@ def _fetch_all_offers() -> list[dict]:
     for doc in docs:
         d = doc.to_dict()
         scraped = d.get("scrapedAt")
+        if not is_europe_location(d.get("location", "")):
+            continue
         offers.append({
             "title": d.get("title", ""), "company": d.get("company", ""),
             "location": d.get("location", ""), "source": d.get("source", ""),
