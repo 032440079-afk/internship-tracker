@@ -1,5 +1,5 @@
 """
-Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF).
+Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF, Novartis, Sanofi, GSK, AstraZeneca, Philips).
 
 Workday, kimlik dogrulamasi gerektirmeyen genel bir JSON API sunar:
   POST https://<tenant>.<wd_host>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs
@@ -20,6 +20,11 @@ COMPANIES = [
     {"name": "Electrolux", "tenant": "electrolux", "wd_host": "wd3", "site": "ElectroluxCareerSite"},
     {"name": "Kone", "tenant": "kone", "wd_host": "wd3", "site": "Careers"},
     {"name": "TRUMPF", "tenant": "trumpf", "wd_host": "wd3", "site": "TRUMPF_Graduates_and_Professionals"},
+    {"name": "Novartis", "tenant": "novartis", "wd_host": "wd3", "site": "Novartis_Careers"},
+    {"name": "Sanofi", "tenant": "sanofi", "wd_host": "wd3", "site": "SanofiCareers"},
+    {"name": "GSK", "tenant": "gsk", "wd_host": "wd5", "site": "GSKCareers"},
+    {"name": "AstraZeneca", "tenant": "astrazeneca", "wd_host": "wd3", "site": "Careers"},
+    {"name": "Philips", "tenant": "philips", "wd_host": "wd3", "site": "jobs-and-careers"},
 ]
 
 RESULTS_PER_PAGE = 20
