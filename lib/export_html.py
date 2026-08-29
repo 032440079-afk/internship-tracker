@@ -5,6 +5,7 @@ https://<kullanici>.github.io/internship-tracker/ adresinden
 tarayicida acilabilir, Telegram disinda goruntuleme/filtreleme saglar.
 """
 import json
+import os
 from datetime import datetime, timezone
 from lib import store
 
@@ -29,6 +30,7 @@ def generate():
     data_json = json.dumps(offers, ensure_ascii=False)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     html = HTML_TEMPLATE.replace("__DATA_JSON__", data_json).replace("__GENERATED_AT__", generated_at).replace("__TOTAL__", str(len(offers)))
+    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"[export_html] {len(offers)} ilan yazildi -> {OUTPUT_PATH}")

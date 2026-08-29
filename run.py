@@ -20,10 +20,10 @@ from lib.filters import is_relevant
 
 # Aktif scraper modülleri. Her biri scrapers/ altında, scrape() fonksiyonu içerir.
 SCRAPER_MODULES = [
-#     "scrapers.erasmus_careers",  # Cloudflare bloklu, otomasyon dışı - haftada bir manuel kontrol et
+    "scrapers.erasmus_careers",
     "scrapers.stageplaza",
     # "scrapers.company_bosch",   # gizli API bulunca eklenecek
-        "scrapers.company_continental",
+    "scrapers.company_continental",
     "scrapers.company_successfactors",
     "scrapers.company_workday",
     # "scrapers.company_zf",
