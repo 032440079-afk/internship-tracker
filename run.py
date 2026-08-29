@@ -54,7 +54,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
         for offer in offers:
             relevant, matches = is_relevant(
-                offer.get("title", ""), offer.get("description", "")
+                offer.get("title", ""), offer.get("description", ""), offer.get("location", "")
             )
             if not relevant:
                 continue
