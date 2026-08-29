@@ -2,7 +2,7 @@
 Bir ilanın Kaan'ın alanına (Endüstri Mühendisliği / Operations / Supply Chain)
 uygun olup olmadığına karar veren basit anahtar kelime filtresi.
 """
-from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS
+from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS
 
 
 def matched_keywords(title: str, description: str = "") -> list[str]:
@@ -12,9 +12,14 @@ def is_internship_type(title: str, description: str = "") -> bool:
     text = f"{title} {description}".lower()
     return any(kw in text for kw in INTERNSHIP_KEYWORDS)
 
+def is_europe_location(location: str) -> bool:
+    loc = (location or "").lower()
+    return not any(kw in loc for kw in NON_EUROPE_KEYWORDS)
 
-def is_relevant(title: str, description: str = "") -> tuple[bool, list[str]]:
+def is_relevant(title: str, description: str = "", location: str = "") -> tuple[bool, list[str]]:
     text = f"{title} {description}".lower()
+    if not is_europe_location(location):
+        return False, []
     for bad in EXCLUDE_KEYWORDS:
         if bad in text:
             return False, []
