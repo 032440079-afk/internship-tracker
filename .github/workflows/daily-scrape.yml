@@ -22,24 +22,12 @@ jobs:
       - name: Bağımlılıkları kur
         run: pip install -r requirements.txt
 
-      - name: Playwright tarayıcısını kur
-        run: playwright install --with-deps chromium
-
       - name: Scraper'ları çalıştır
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
         run: python run.py
-
-
-      - name: Debug screenshot yukle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-screenshot
-          path: debug_erasmus_page0.png
-          if-no-files-found: warn
 
       - name: Dashboard commit et
         if: always()
