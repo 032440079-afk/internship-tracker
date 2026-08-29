@@ -1,5 +1,6 @@
 name: Daily Internship Scrape
-
+permissions:
+  contents: write
 on:
   schedule:
     # Her gün UTC 06:00 = Türkiye saatiyle yaz saatinde 09:00 civarı
@@ -39,3 +40,11 @@ jobs:
           name: debug-screenshot
           path: debug_erasmus_page0.png
           if-no-files-found: warn
+
+      - name: Dashboard commit et
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git diff --staged --quiet || (git commit -m "Update dashboard" && git push)
