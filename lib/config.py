@@ -58,6 +58,17 @@ INTERNSHIP_KEYWORDS = [
     "stajyer",
 ]
 
+# Avrupa disi ilanlari elemek icin konum anahtar kelimeleri
+# (location metni bunlardan birini icerirse ilan elenir)
+NON_EUROPE_KEYWORDS = [
+    "taiwan", "vietnam", "china", "singapore", "india", "indonesia",
+    "malaysia", "thailand", "philippines", "japan", "korea", "hong kong",
+    "russia", "usa", "united states", "mexico", "brazil", "argentina",
+    "australia", "canada", "south africa", "nigeria", "kenya", "morocco",
+    "egypt", "saudi", "uae", "dubai", "qatar", "israel", "pakistan",
+    "bangladesh", "sri lanka", "chile", "colombia", "peru",
+]
+
 REQUEST_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
