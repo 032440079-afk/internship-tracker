@@ -19,7 +19,7 @@ Sayfalama: /traineeships?page=0, ?page=1, ... (0-indexed)
 Alt bilgi: "Displaying 1 - 10 of 126" gibi toplam sayıyı veriyor.
 """
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync
+from playwright_stealth import Stealth
 from bs4 import BeautifulSoup
 
 BASE_URL = "https://www.erasmuscareers.org/traineeships"
@@ -70,7 +70,7 @@ def _has_next_page(html: str) -> bool:
 def scrape() -> list[dict]:
     all_offers = []
 
-    with sync_playwright() as p:
+    with Stealth().use_sync(sync_playwright()) as p:
         browser = p.chromium.launch(
             headless=True,
             args=[
@@ -87,7 +87,6 @@ def scrape() -> list[dict]:
             timezone_id="Europe/Amsterdam",
         )
         page = context.new_page()
-        stealth_sync(page)
 
         for page_num in range(MAX_PAGES):
             url = BASE_URL if page_num == 0 else f"{BASE_URL}?page={page_num}"
