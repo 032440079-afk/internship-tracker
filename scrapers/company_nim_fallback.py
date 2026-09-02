@@ -81,7 +81,7 @@ def scrape() -> list[dict]:
         except Exception as e:
             print(f"[HATA] {name} scrape edilemedi (nim_fallback): {e}")
 
-    return all_offers,
+    return all_offers
 
 if __name__ == "__main__":
     results = scrape()
