@@ -11,6 +11,7 @@ import os
 
 FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 TELEGRAM_CHAT_IDS = [
     c.strip() for c in os.environ.get("TELEGRAM_CHAT_IDS", "").split(",") if c.strip()
 ]
