@@ -4,3 +4,5 @@ lxml==6.0.2
 firebase-admin==7.5.0
 python-telegram-bot==22.8
 setuptools
+playwright==1.55.0
+openai
