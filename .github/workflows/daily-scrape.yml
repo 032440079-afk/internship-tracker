@@ -28,6 +28,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          run: python run.py
 
       - name: Dashboard commit et
         if: always()
