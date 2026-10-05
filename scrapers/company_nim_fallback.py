@@ -8,6 +8,8 @@ Gereken ortam degiskeni: NVIDIA_API_KEY (build.nvidia.com hesabindan alinir)
 Tanimli degilse bu scraper sessizce atlanir, pipeline'in geri kalani calisir.
 """
 import json
+import os
+import re
 from playwright.sync_api import sync_playwright
 from openai import OpenAI
 from lib.config import NVIDIA_API_KEY
@@ -19,9 +21,14 @@ TARGETS = [
 ]
 
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
-NIM_MODEL = "meta/llama-3.3-70b-instruct"
+# meta/llama-3.3-70b-instruct 2026-08-26'da kaldirildi (HTTP 410). Model ileride
+# yine kalkarsa kod degistirmeden NIM_MODEL ortam degiskeniyle degistirilebilir.
+NIM_MODEL = os.environ.get("NIM_MODEL") or "nvidia/llama-3.3-nemotron-super-49b-v1"
 
-SYSTEM_PROMPT = """Sen bir bilgi cikarma motorusun. Sana bir sirket kariyer sayfasinin gorunur metni verilecek. Erasmus+ veya J-1 staj basvurusuna uyabilecek her staj/working student/thesis/trainee ilanini cikart. Tam zamanli, kidemli ve yonetici pozisyonlarini yoksay. SADECE bu JSON semasina uyan bir obje ile cevap ver, aciklama veya markdown ekleme:
+# "detailed thinking off": Nemotron'un akil yurutme modunu kapatir, cevap direkt JSON olur.
+SYSTEM_PROMPT = """detailed thinking off
+
+Sen bir bilgi cikarma motorusun. Sana bir sirket kariyer sayfasinin gorunur metni verilecek. Erasmus+ veya J-1 staj basvurusuna uyabilecek her staj/working student/thesis/trainee ilanini cikart. Tam zamanli, kidemli ve yonetici pozisyonlarini yoksay. SADECE bu JSON semasina uyan bir obje ile cevap ver, aciklama veya markdown ekleme:
 
 {"listings": [{"title": "string", "location": "string or null", "url": "string"}]}
 
@@ -50,10 +57,17 @@ def _extract_listings(page_text: str, company: str) -> list[dict]:
         ],
         temperature=0.0,
         max_tokens=4096,
-        response_format={"type": "json_object"},
     )
-    data = json.loads(response.choices[0].message.content)
+    data = _parse_json(response.choices[0].message.content or "")
     return data.get("listings", [])
+
+def _parse_json(content: str) -> dict:
+    # Model bazen <think> blogu veya ```json``` cercevesi ekliyor; ilk {...} blogunu al.
+    content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL)
+    start, end = content.find("{"), content.rfind("}")
+    if start == -1 or end < start:
+        raise ValueError(f"Model JSON dondurmedi: {content[:200]!r}")
+    return json.loads(content[start:end + 1])
 
 def scrape() -> list[dict]:
     if not NVIDIA_API_KEY:
