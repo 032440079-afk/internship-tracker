@@ -31,6 +31,14 @@ RELEVANT_KEYWORDS = [
     "or-tools",
     "optimization",
     "endüstri mühendis",
+    # Almanca/diger dillerdeki ilan basliklari icin (orn. "Praktikum Logistik")
+    "logisti",          # logistik, logistique, logística, logistica
+    "lieferkette",
+    "produktion",
+    "fertigung",
+    "wirtschaftsingenieur",
+    "prozessoptimierung",
+    "optimierung",
 ]
 
 # İşimize yaramayan ama bu kaynaklarda sık çıkan gürültü kelimeleri (opsiyonel ek filtre)
@@ -48,6 +56,7 @@ INTERNSHIP_KEYWORDS = [
     "intern",
     "internship",
     "praktikum",
+    "praktikant",       # Praktikant*in / Praktikant (m/w/d)
     "werkstudent",
     "working student",
     "trainee",
