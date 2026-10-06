@@ -13,12 +13,19 @@ from scrapers.company_nim_fallback import NIM_BASE_URL, NIM_MODEL, _parse_json
 BATCH_SIZE = 25
 
 SYSTEM_PROMPT = """Bir endustri muhendisligi universite ogrencisi Avrupa'da staj ariyor. Sana numarali ilan basliklari verilecek.
-Su ilanlari TUT: universite ogrencisine yonelik staj, Praktikum, Werkstudent/working student, bitirme tezi (Abschlussarbeit/thesis) veya trainee pozisyonlari; alanlari operasyon, tedarik zinciri, lojistik, uretim planlama/yonetimi, satin alma, kalite, lean, surec optimizasyonu, endustri muhendisligi veya bunlara yakin muhendislik/analitik isler.
-Su ilanlari ELE: okul ogrencisi stajlari, mesleki egitim (Ausbildung), vasifsiz/depo/uretim isciligi, tatil veya ek is, gonullu hizmet, deneyimli/kidemli/yonetici pozisyonlari, ve alan disi isler (IK, pazarlama, finans, hukuk, IT destek, medya, saglik vb.).
-SADECE su JSON ile cevap ver: {"keep": [tutulacak ilanlarin numaralari]}"""
+Bu ogrenciye UYGUN OLMAYAN ilanlari sec. Supheliysen ELEME — ilan tutulsun.
+Su ilanlar her zaman UYGUNDUR (eleme): universite ogrencisine yonelik staj, Praktikum, Werkstudent/working student,
+bitirme tezi (Abschlussarbeit/thesis) veya trainee pozisyonlari; alanlari satin alma (Einkauf, purchasing, procurement),
+kalite (Qualitaet, quality management/assurance, supplier quality), operasyon, tedarik zinciri, lojistik, uretim
+planlama/yonetimi, lean, surec optimizasyonu, proje yonetimi, endustri muhendisligi veya yakin muhendislik/analitik isler.
+Su ilanlari ELE: okul ogrencisi stajlari, mesleki egitim (Ausbildung), vasifsiz/depo/uretim isciligi, tatil veya ek is,
+gonullu hizmet, deneyimli/kidemli/yonetici pozisyonlari, eczacilik/kimya/biyoloji laboratuvar isleri (ornek: GMP kalite
+kontrol laboratuvari) ve alan disi isler (IK, pazarlama, finans, hukuk, IT destek, medya, saglik vb.).
+SADECE su JSON ile cevap ver: {"drop": [elenecek ilanlarin numaralari]}"""
 
 
 def _ask(client: OpenAI, batch: list[dict]) -> set[int]:
+    """Elenecek ilanlarin numaralarini dondurur. Modelin atladigi ilanlar tutulur."""
     lines = "\n".join(
         f"{i}. {o.get('title', '')} | {o.get('company', '')} | {o.get('location', '')}" for i, o in enumerate(batch)
     )
@@ -30,8 +37,8 @@ def _ask(client: OpenAI, batch: list[dict]) -> set[int]:
         response_format={"type": "json_object"},
         extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
-    keep = _parse_json(response.choices[0].message.content or "").get("keep", [])
-    return {int(i) for i in keep if str(i).isdigit()}
+    drop = _parse_json(response.choices[0].message.content or "").get("drop", [])
+    return {int(i) for i in drop if str(i).isdigit()}
 
 
 def filter_offers(offers: list[dict]) -> list[dict]:
@@ -43,13 +50,13 @@ def filter_offers(offers: list[dict]) -> list[dict]:
     for start in range(0, len(offers), BATCH_SIZE):
         batch = offers[start:start + BATCH_SIZE]
         try:
-            keep_ids = _ask(client, batch)
+            drop_ids = _ask(client, batch)
         except Exception as e:
             print(f"[ai_filter] grup filtrelenemedi, hepsi tutuluyor: {e}")
             kept.extend(batch)
             continue
         for i, offer in enumerate(batch):
-            if i in keep_ids:
+            if i not in drop_ids:
                 kept.append(offer)
             else:
                 print(f"  [AI-ELENDI] {offer.get('title')} — {offer.get('company')}")
