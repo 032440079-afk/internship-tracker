@@ -3,7 +3,7 @@ Bundesagentur fur Arbeit Jobborse'deki Praktikum/Trainee ilanlarini tarar.
 Almanya'daki binlerce sirketin staj ilanini tek kaynaktan getirir.
 
 Herkese acik API (bundesAPI/jobsuche-api):
-  GET https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs
+  GET https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs
   Header: X-API-Key: jobboerse-jobsuche
   angebotsart=34 -> Praktikum/Trainee
 """
@@ -11,7 +11,7 @@ import requests
 
 from lib.config import REQUEST_HEADERS
 
-API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v4/jobs"
+API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs"  # v4 artik 403 donuyor
 SEARCH_TERMS = ["Industrial Engineering", "Wirtschaftsingenieur", "Supply Chain", "Logistik",
                 "Produktion", "Operations", "Lean", "Prozessoptimierung"]
 PAGE_SIZE = 100
