@@ -24,11 +24,16 @@ TARGETS = [
     {"name": "Daimler Truck", "url": "https://www.daimlertruck.com/en/career/job-search"},
     {"name": "Volvo Group", "url": "https://www.volvogroup.com/en/careers/job-search.html"},
     {"name": "Stellantis", "url": "https://careers.stellantis.com/"},
+    {"name": "Michelin", "url": "https://jobs.michelinman.com/"},
     # Havacilik & sanayi
     {"name": "Siemens", "url": "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/intern"},
     {"name": "Siemens Energy", "url": "https://jobs.siemens-energy.com/en_US/jobs"},
     {"name": "ABB", "url": "https://careers.abb/global/en/search-results?keywords=intern"},
     {"name": "Schneider Electric", "url": "https://careers.se.com/jobs?keywords=intern"},
+    {"name": "Alstom", "url": "https://jobsearch.alstom.com/search/?q=intern"},
+    {"name": "Atlas Copco", "url": "https://www.atlascopcogroup.com/en/careers/jobs/job-overview"},
+    {"name": "Signify", "url": "https://www.careers.signify.com/global/en/search-results?keywords=intern"},
+    {"name": "Nokia", "url": "https://careers.nokia.com/jobs?keywords=intern"},
     # Kimya & tuketim
     {"name": "Bayer", "url": "https://talent.bayer.com/careers?query=intern"},
     {"name": "Henkel", "url": "https://www.henkel.com/careers/find-your-job-apply"},

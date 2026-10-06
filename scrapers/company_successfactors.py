@@ -1,5 +1,5 @@
 """
-SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Jungheinrich, Heineken, Vestas, Novo Nordisk, Danfoss, SAP, Schaeffler, BASF).
+SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Jungheinrich, Heineken, Vestas, Novo Nordisk, Danfoss, SAP, Schaeffler, BASF, SKF, Volvo Cars).
 Erisilebilir format sayfasi /search/ duz HTML donduruyor.
 """
 import re
@@ -20,6 +20,8 @@ COMPANIES = [
     {"name": "SAP", "search_url": "https://jobs.sap.com/search/", "base_url": "https://jobs.sap.com"},
     {"name": "Schaeffler", "search_url": "https://jobs.schaeffler.com/search/", "base_url": "https://jobs.schaeffler.com"},
     {"name": "BASF", "search_url": "https://basf.jobs/search/", "base_url": "https://basf.jobs"},
+    {"name": "SKF", "search_url": "https://career.skf.com/search/", "base_url": "https://career.skf.com"},
+    {"name": "Volvo Cars", "search_url": "https://jobs.volvocars.com/search/", "base_url": "https://jobs.volvocars.com"},
 ]
 
 RESULTS_PER_PAGE = 25
