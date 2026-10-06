@@ -105,8 +105,10 @@ def run(dry_run: bool = False, only_source: str | None = None):
                 _send_application(offer, reader)
                 applications_made += 1
 
-    if reader is not None:
-        reader.__exit__(None, None, None)
+        # Tarayiciyi kaynak bitince kapat: sonraki scraper'lar kendi Playwright'larini acabilsin
+        if reader is not None:
+            reader.__exit__(None, None, None)
+            reader = None
 
     print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | CV üretilen: {applications_made}")
 

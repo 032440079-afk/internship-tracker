@@ -3,6 +3,7 @@ Yeni ilan bulunduğunda Telegram üzerinden bildirim gönderir.
 Birden fazla chat_id'ye (sen + kız arkadaşın) aynı anda mesaj atar.
 """
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from telegram import Bot
 from telegram.constants import ParseMode
 
@@ -50,11 +51,18 @@ async def _send_documents(paths: list[str], caption: str):
                 print(f"[notify] chat_id={chat_id} için dosya gönderilemedi: {e}")
 
 
+def _run(coro):
+    """Coroutine'i ayri bir thread'de calistirir: Playwright sync API acikken ana thread'de bir event loop calisir
+    ve orada asyncio.run() hata verir."""
+    with ThreadPoolExecutor(max_workers=1) as ex:
+        return ex.submit(asyncio.run, coro).result()
+
+
 def notify_new_offer(offer: dict):
     text = _format_message(offer)
-    asyncio.run(_send_all(text))
+    _run(_send_all(text))
 
 
 def send_application_files(offer: dict, paths: list[str]):
     caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"[:1000]
-    asyncio.run(_send_documents(paths, caption))
+    _run(_send_documents(paths, caption))
