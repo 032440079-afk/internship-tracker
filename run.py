@@ -22,11 +22,11 @@ from lib.filters import is_relevant
 SCRAPER_MODULES = [
     # "scrapers.erasmus_careers",  # Cloudflare IP bloğu — GitHub Actions datacenter IP'si engelliyor
     "scrapers.stageplaza",
-    # "scrapers.company_bosch",   # gizli API bulunca eklenecek
     "scrapers.company_continental",
       "scrapers.company_nim_fallback",
     "scrapers.company_successfactors",
     "scrapers.company_workday",
+    "scrapers.company_smartrecruiters",
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]

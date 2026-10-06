@@ -31,7 +31,7 @@ COMPANIES = [
 ]
 
 RESULTS_PER_PAGE = 20
-MAX_PAGES = 30
+MAX_PAGES = 100  # 30 sayfa (600 ilan) Airbus/NXP/ZEISS gibi buyuk sirketlerde yetmiyordu
 
 
 def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: requests.Session):

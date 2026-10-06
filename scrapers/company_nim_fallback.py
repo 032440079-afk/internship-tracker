@@ -20,9 +20,7 @@ TARGETS = [
     {"name": "Porsche", "url": "https://jobs.porsche.com/index.php?ac=search_result&search_criterion_keyword%5B%5D=internship"},
     # Otomotiv
     {"name": "Audi", "url": "https://www.audi.com/en/career/job-search.html"},
-    {"name": "Bosch", "url": "https://jobs.bosch.com/en/?search=intern"},
     {"name": "Daimler Truck", "url": "https://www.daimlertruck.com/en/career/job-search"},
-    {"name": "Volvo Group", "url": "https://www.volvogroup.com/en/careers/job-search.html"},
     {"name": "Stellantis", "url": "https://careers.stellantis.com/"},
     {"name": "Michelin", "url": "https://jobs.michelinman.com/"},
     # Havacilik & sanayi
