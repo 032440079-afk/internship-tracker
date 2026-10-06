@@ -15,8 +15,9 @@ import argparse
 import importlib
 import traceback
 
-from lib import store, notify, export_html, ai_filter
+from lib import store, notify, export_html, ai_filter, application, config
 from lib.filters import is_relevant
+from lib.job_details import JobPageReader
 
 # Aktif scraper modülleri. Her biri scrapers/ altında, scrape() fonksiyonu içerir.
 SCRAPER_MODULES = [
@@ -36,9 +37,26 @@ SCRAPER_MODULES = [
 ]
 
 
+def _send_application(offer: dict, reader: JobPageReader):
+    """Ilana gore CV + on yazi uretip Telegram'a gonderir. Icerik loglanmaz (Actions loglari herkese acik)."""
+    try:
+        job_text = reader.read(offer["url"])
+        files = application.build_application(offer, job_text)
+        paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
+        notify.send_application_files(offer, paths)
+        print(f"    [CV] {files['changes']} bölüm uyarlandı, ön yazı: {'var' if files['cover_letter'] else 'yok'}")
+    except Exception as e:
+        print(f"    [CV-HATA] {type(e).__name__}")
+
+
 def run(dry_run: bool = False, only_source: str | None = None):
     total_found = 0
     total_new = 0
+    applications_made = 0
+    reader = None
+    make_applications = not dry_run and application.available()
+    if not dry_run and not make_applications:
+        print("[CV] Ana CV veya NVIDIA_API_KEY yok; CV/ön yazı üretimi kapalı.")
 
     for module_name in SCRAPER_MODULES:
         source_key = module_name.split(".")[-1]
@@ -81,8 +99,16 @@ def run(dry_run: bool = False, only_source: str | None = None):
             store.save_offer(offer)
             notify.notify_new_offer(offer)
             print(f"  [YENİ] {offer['title']} — {offer.get('company')}")
+            if make_applications and applications_made < config.MAX_APPLICATIONS_PER_RUN:
+                if reader is None:
+                    reader = JobPageReader().__enter__()
+                _send_application(offer, reader)
+                applications_made += 1
 
-    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new}")
+    if reader is not None:
+        reader.__exit__(None, None, None)
+
+    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | CV üretilen: {applications_made}")
 
     if not dry_run:
         try:
