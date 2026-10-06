@@ -26,6 +26,7 @@ TARGETS = [
     {"name": "Siemens Energy", "url": "https://jobs.siemens-energy.com/en_US/jobs"},
     {"name": "ABB", "url": "https://careers.abb/global/en/search-results?keywords=intern"},
     {"name": "Alstom", "url": "https://jobsearch.alstom.com/search/?q=intern"},
+    {"name": "Hilti", "url": "https://careers.hilti.group/en/jobs/"},
     {"name": "Atlas Copco", "url": "https://www.atlascopcogroup.com/en/careers/jobs/job-overview"},
     {"name": "Thales", "url": "https://careers.thalesgroup.com/global/en/search-results?keywords=intern"},
     {"name": "Orsted", "url": "https://orsted.com/en/careers/vacancies-list"},

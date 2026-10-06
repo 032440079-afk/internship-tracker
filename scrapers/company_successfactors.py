@@ -1,5 +1,5 @@
 """
-SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Jungheinrich, Heineken, Vestas, Novo Nordisk, Danfoss, SAP, Schaeffler, Nestle, DACHSER, MAHLE, SKF, Volvo Group, Volvo Cars).
+SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Jungheinrich, Heineken, Vestas, Novo Nordisk, Danfoss, SAP, Schaeffler, Nestle, DACHSER, MAHLE, Epiroc, Endress+Hauser, Schindler, SKF, Volvo Group, Volvo Cars).
 Erisilebilir format sayfasi /search/ duz HTML donduruyor.
 """
 import re
@@ -22,6 +22,9 @@ COMPANIES = [
     {"name": "Nestle", "search_url": "https://jobdetails.nestle.com/search/", "base_url": "https://jobdetails.nestle.com"},
     {"name": "DACHSER", "search_url": "https://careers.dachser.com/search/", "base_url": "https://careers.dachser.com"},
     {"name": "MAHLE", "search_url": "https://careers.mahle.com/search/", "base_url": "https://careers.mahle.com"},
+    {"name": "Epiroc", "search_url": "https://www.careerprofile.epiroc.com/search/", "base_url": "https://www.careerprofile.epiroc.com"},
+    {"name": "Endress+Hauser", "search_url": "https://careers.endress.com/search/", "base_url": "https://careers.endress.com"},
+    {"name": "Schindler", "search_url": "https://job.schindler.com/Schindler/search/", "base_url": "https://job.schindler.com"},
     {"name": "SKF", "search_url": "https://career.skf.com/search/", "base_url": "https://career.skf.com"},
     {"name": "Volvo Group", "search_url": "https://jobs.volvogroup.com/search/", "base_url": "https://jobs.volvogroup.com"},
     {"name": "Volvo Cars", "search_url": "https://jobs.volvocars.com/search/", "base_url": "https://jobs.volvocars.com"},
