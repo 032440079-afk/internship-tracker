@@ -1,5 +1,5 @@
 """
-BMW, Mercedes-Benz ve Porsche gibi JS-agirlikli, CSS-selector ile
+BMW, Mercedes-Benz, Porsche ve benzeri JS-agirlikli, CSS-selector ile
 taranamayan kariyer sitelerini render edip bir LLM (NVIDIA NIM) ile
 yapisal ilan listesi cikartir. Diger scraper'lar gibi scrape() -> list[dict]
 dondurur, run.py tarafindan aynen cagrilir.
@@ -10,7 +10,7 @@ Tanimli degilse bu scraper sessizce atlanir, pipeline'in geri kalani calisir.
 import json
 import os
 import re
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 from openai import OpenAI
 from lib.config import NVIDIA_API_KEY
 
@@ -18,6 +18,26 @@ TARGETS = [
     {"name": "BMW Group", "url": "https://bmw.jobs/VbDLOr81"},
     {"name": "Mercedes-Benz", "url": "https://jobs.mercedes-benz.com/?TargetGroup.Code=2&CareerLevel.Code=19"},
     {"name": "Porsche", "url": "https://jobs.porsche.com/index.php?ac=search_result&search_criterion_keyword%5B%5D=internship"},
+    # Otomotiv
+    {"name": "Audi", "url": "https://www.audi.com/en/career/job-search.html"},
+    {"name": "Bosch", "url": "https://jobs.bosch.com/en/?search=intern"},
+    {"name": "Daimler Truck", "url": "https://www.daimlertruck.com/en/career/job-search"},
+    {"name": "Volvo Group", "url": "https://www.volvogroup.com/en/careers/job-search.html"},
+    {"name": "Stellantis", "url": "https://careers.stellantis.com/"},
+    # Havacilik & sanayi
+    {"name": "Siemens", "url": "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/intern"},
+    {"name": "Siemens Energy", "url": "https://jobs.siemens-energy.com/en_US/jobs"},
+    {"name": "ABB", "url": "https://careers.abb/global/en/search-results?keywords=intern"},
+    {"name": "Schneider Electric", "url": "https://careers.se.com/jobs?keywords=intern"},
+    # Kimya & tuketim
+    {"name": "Bayer", "url": "https://talent.bayer.com/careers?query=intern"},
+    {"name": "Henkel", "url": "https://www.henkel.com/careers/find-your-job-apply"},
+    {"name": "Nestle", "url": "https://www.nestle.com/jobs/search-jobs?keyword=intern"},
+    {"name": "P&G", "url": "https://www.pgcareers.com/eu/en/internships"},
+    # Lojistik
+    {"name": "DHL Group", "url": "https://careers.dhl.com/global/en/internships"},
+    {"name": "DSV (DB Schenker)", "url": "https://www.dsv.com/en-gb/careers/job-search"},
+    {"name": "Kuehne+Nagel", "url": "https://jobs.kuehne-nagel.com/global/en/search-results?keywords=intern"},
 ]
 
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
@@ -38,7 +58,10 @@ def _fetch_rendered_text(url: str, timeout_ms: int = 20000) -> str:
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
         ))
-        page.goto(url, timeout=timeout_ms, wait_until="networkidle")
+        try:
+            page.goto(url, timeout=timeout_ms, wait_until="networkidle")
+        except PlaywrightTimeout:
+            pass  # bazi siteler hic "networkidle" olmuyor; o ana kadar yuklenen metni kullan
         text = page.inner_text("body")
         browser.close()
         return text
@@ -46,19 +69,26 @@ def _fetch_rendered_text(url: str, timeout_ms: int = 20000) -> str:
 def _extract_listings(page_text: str, company: str) -> list[dict]:
     client = OpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY)
     user_prompt = f"Sirket: {company}\n\nSayfa metni:\n\"\"\"\n{page_text[:15000]}\n\"\"\""
-    response = client.chat.completions.create(
-        model=NIM_MODEL,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt},
-        ],
-        temperature=0.0,
-        max_tokens=4096,
-        # Akil yurutme modu kapali: token butcesi dusunmeye gitmesin, cevap direkt JSON olsun.
-        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-    )
-    data = _parse_json(response.choices[0].message.content or "")
-    return data.get("listings", [])
+    # Model bazen yarim JSON donduruyor (orn. sadece '{"'); bir kez daha dene.
+    for attempt in range(2):
+        response = client.chat.completions.create(
+            model=NIM_MODEL,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.0,
+            max_tokens=4096,
+            response_format={"type": "json_object"},
+            # Akil yurutme modu kapali: token butcesi dusunmeye gitmesin, cevap direkt JSON olsun.
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        )
+        try:
+            data = _parse_json(response.choices[0].message.content or "")
+            return data.get("listings", [])
+        except ValueError:
+            if attempt == 1:
+                raise
 
 def _parse_json(content: str) -> dict:
     # Model bazen <think> blogu veya ```json``` cercevesi ekliyor; ilk {...} blogunu al.
