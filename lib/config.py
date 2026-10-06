@@ -56,6 +56,16 @@ EXCLUDE_KEYWORDS = [
     "babysitter",
     "bar & restaurant",
     "teaching internship",
+    # Universite stajı olmayan ilanlar (Arbeitsagentur/Arbeitnow'dan geliyordu)
+    "schülerprakti", "schüler/", "studentenjob", "ferienjob", "ferienarbeit", "minijob", "aushilfe",
+    "ausbildung", "bundesfreiwillig", "bufdi", "freiwilliges soziales", "(fsj)", "bfd ",
+    "produktionshelfer", "head of ",
+    # "Produktion" kelimesinin medya anlami
+    "tv-produktion", "filmproduktion", "videoproduktion", "medienproduktion", "pharmaziepraktikant",
+    # "Operations" kelimesinin endustri muhendisligi disi anlamlari
+    "hr operations", "people operations", "it operations", "tax operations", "legal operations",
+    "treasury operations", "fund operations", "sales operations", "store operations", "cabin operations",
+    "finance operations", "financial markets", "platform operations",
 ]
 
 # Sadece staj/ogrenci pozisyonlarini kabul etmek icin gerekli anahtar kelimeler
