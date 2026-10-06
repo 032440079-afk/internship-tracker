@@ -1,5 +1,5 @@
 """
-Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF, Novartis, Sanofi, GSK, AstraZeneca, Philips, Airbus, NXP, ZEISS).
+Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF, Novartis, Sanofi, GSK, AstraZeneca, Philips, Airbus, NXP, ZEISS, Valeo).
 
 Workday, kimlik dogrulamasi gerektirmeyen genel bir JSON API sunar:
   POST https://<tenant>.<wd_host>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs
@@ -28,6 +28,7 @@ COMPANIES = [
     {"name": "Airbus", "tenant": "ag", "wd_host": "wd3", "site": "Airbus"},
     {"name": "NXP", "tenant": "nxp", "wd_host": "wd3", "site": "careers"},
     {"name": "ZEISS", "tenant": "zeissgroup", "wd_host": "wd3", "site": "External"},
+    {"name": "Valeo", "tenant": "valeo", "wd_host": "wd3", "site": "valeo_jobs"},
 ]
 
 RESULTS_PER_PAGE = 20

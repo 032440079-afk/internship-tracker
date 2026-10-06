@@ -21,7 +21,7 @@ def _is_internship(job: dict) -> bool:
 
 def scrape() -> list[dict]:
     session = requests.Session()
-    offers = []
+    offers = {}
 
     try:
         for page in range(1, MAX_PAGES + 1):
@@ -34,7 +34,7 @@ def scrape() -> list[dict]:
             for job in jobs:
                 if not _is_internship(job) or not job.get("url") or not job.get("title"):
                     continue
-                offers.append({
+                offers[job["url"]] = {
                     "title": job["title"],
                     "company": job.get("company_name", ""),
                     "location": job.get("location", ""),
@@ -42,11 +42,11 @@ def scrape() -> list[dict]:
                     "url": job["url"],
                     # Aciklama bos birakiliyor: uzun metinde "international" gibi kelimeler "intern" filtresini yaniltiyor.
                     "description": "",
-                })
+                }
     except Exception as e:
         print(f"[HATA] Arbeitnow scrape edilemedi: {e}")
 
-    return offers
+    return list(offers.values())
 
 
 if __name__ == "__main__":
