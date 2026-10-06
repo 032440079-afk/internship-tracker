@@ -5,6 +5,7 @@ Almanya'daki binlerce sirketin staj ilanini tek kaynaktan getirir.
 Herkese acik API (bundesAPI/jobsuche-api):
   GET https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs
   Header: X-API-Key: jobboerse-jobsuche
+  Yanit (v6): ergebnisliste[] -> stellenangebotsTitel, firma, referenznummer, stellenlokationen[].adresse
   angebotsart=34 -> Praktikum/Trainee
 """
 import requests
@@ -31,22 +32,23 @@ def scrape() -> list[dict]:
                 resp = session.get(API_URL, params=params, headers=headers, timeout=25)
                 if resp.status_code != 200:
                     break
-                jobs = resp.json().get("stellenangebote", [])
+                jobs = resp.json().get("ergebnisliste", [])
                 if not jobs:
                     break
                 for job in jobs:
-                    refnr = job.get("refnr", "")
-                    title = job.get("titel") or job.get("beruf", "")
+                    refnr = job.get("referenznummer", "")
+                    title = job.get("stellenangebotsTitel") or job.get("hauptberuf", "")
                     if not refnr or not title:
                         continue
-                    ort = job.get("arbeitsort") or {}
+                    lok = (job.get("stellenlokationen") or [{}])[0].get("adresse") or {}
                     offers[refnr] = {
                         "title": title,
-                        "company": job.get("arbeitgeber", ""),
-                        "location": ", ".join(p for p in (ort.get("ort"), ort.get("land")) if p),
-                        "country": ort.get("land", ""),
+                        "company": job.get("firma", ""),
+                        "location": ", ".join(p for p in (lok.get("ort"), (lok.get("land") or "").title()) if p),
+                        "country": lok.get("land", ""),
                         "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{refnr}",
-                        "description": "",
+                        # angebotsart=34 ile hepsi staj; baslikta "Praktikum" gecmese de staj filtresinden gecsin
+                        "description": "Praktikum/Trainee",
                     }
                 if len(jobs) < PAGE_SIZE:
                     break

@@ -30,6 +30,7 @@ SCRAPER_MODULES = [
     "scrapers.company_greenhouse",
     "scrapers.arbeitnow",
     "scrapers.company_amazon",
+    "scrapers.arbeitsagentur",
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]
