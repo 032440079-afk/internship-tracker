@@ -218,10 +218,29 @@ def build_application(offer: dict, job_text: str) -> dict:
     doc.save(cv_docx)
     result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes}
 
-    letter = [p for p in (answer.get("cover_letter") or []) if isinstance(p, str) and p.strip()]
     letter_corpus = f"{cv_text}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
-    if letter and not any(_suspicious_tokens(p, letter_corpus) for p in letter):
+    letter, removed = _clean_letter(answer.get("cover_letter") or [], letter_corpus)
+    result["letter_sentences_removed"] = removed
+    if len(letter) >= 2:
         cl_docx = os.path.join(outdir, f"Kaan_Dogru_Cover_Letter_{company}.docx")
         _build_cover_letter(master, letter, offer, cl_docx)
         result["cover_letter"] = _to_pdf(cl_docx, outdir)
     return result
+
+
+def _clean_letter(paragraphs: list, corpus_lower: str) -> tuple[list[str], int]:
+    """CV'de / ilanda gecmeyen ozel isim, kisaltma veya sayi iceren cumleleri cikarir.
+    (temizlenmis_paragraflar, cikarilan_cumle_sayisi) dondurur."""
+    cleaned, removed = [], 0
+    for p in paragraphs:
+        if not isinstance(p, str) or not p.strip():
+            continue
+        kept = []
+        for sentence in re.split(r"(?<=[.!?])\s+", p.strip()):
+            if _suspicious_tokens(sentence, corpus_lower):
+                removed += 1
+            else:
+                kept.append(sentence)
+        if kept:
+            cleaned.append(" ".join(kept))
+    return cleaned, removed
