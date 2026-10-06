@@ -10,6 +10,7 @@ Tanimli degilse bu scraper sessizce atlanir, pipeline'in geri kalani calisir.
 import json
 import os
 import re
+from urllib.parse import quote
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 from openai import OpenAI
 from lib.config import NVIDIA_API_KEY
@@ -53,9 +54,13 @@ SYSTEM_PROMPT = """Sen bir bilgi cikarma motorusun. Sana bir sirket kariyer sayf
 
 {"listings": [{"title": "string", "location": "string or null", "url": "string"}]}
 
+"url" icin SADECE "Sayfadaki linkler" listesindeki bir adresi kullan; ilana ait link yoksa null yaz, asla adres uydurma.
 Uygun ilan yoksa {"listings": []} don."""
 
-def _fetch_rendered_text(url: str, timeout_ms: int = 20000) -> str:
+MAX_LINKS_IN_PROMPT = 150
+
+def _fetch_rendered_text(url: str, timeout_ms: int = 20000) -> tuple[str, list[tuple[str, str]]]:
+    """Sayfanin gorunur metnini ve (link metni, mutlak adres) listesini dondurur."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(user_agent=(
@@ -67,12 +72,17 @@ def _fetch_rendered_text(url: str, timeout_ms: int = 20000) -> str:
         except PlaywrightTimeout:
             pass  # bazi siteler hic "networkidle" olmuyor; o ana kadar yuklenen metni kullan
         text = page.inner_text("body")
+        links = page.eval_on_selector_all(
+            "a[href]", "els => els.map(e => [(e.innerText || '').trim(), e.href])"
+        )
         browser.close()
-        return text
+        return text, [(t, h) for t, h in links if h.startswith("http")]
 
-def _extract_listings(page_text: str, company: str) -> list[dict]:
+def _extract_listings(page_text: str, company: str, links: list[tuple[str, str]]) -> list[dict]:
     client = OpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY)
-    user_prompt = f"Sirket: {company}\n\nSayfa metni:\n\"\"\"\n{page_text[:15000]}\n\"\"\""
+    link_lines = "\n".join(f"- {t[:120]} -> {h}" for t, h in links if len(t) > 5)[:8000]
+    user_prompt = (f"Sirket: {company}\n\nSayfa metni:\n\"\"\"\n{page_text[:15000]}\n\"\"\"\n\n"
+                   f"Sayfadaki linkler:\n{link_lines}")
     # Model bazen yarim JSON donduruyor (orn. sadece '{"'); bir kez daha dene.
     for attempt in range(2):
         response = client.chat.completions.create(
@@ -111,18 +121,25 @@ def scrape() -> list[dict]:
     for target in TARGETS:
         name = target["name"]
         try:
-            text = _fetch_rendered_text(target["url"])
-            listings = _extract_listings(text, name)
+            text, links = _fetch_rendered_text(target["url"])
+            page_urls = {h.rstrip("/") for _, h in links}
+            listings = _extract_listings(text, name, links)
             for item in listings:
                 title = item.get("title", "")
                 if not title:
                     continue
+                url = (item.get("url") or "").rstrip("/")
+                if url not in page_urls:
+                    # Model sayfada olmayan bir adres verdi (uydurma olabilir) ya da hic vermedi:
+                    # kariyer sayfasina yonlendir, ama basliga gore benzersiz yap ki ayni sirketin
+                    # ilanlari tek bir URL altinda birlesip "zaten kayitli" sayilmasin.
+                    url = f"{target['url']}#{quote(title[:80])}"
                 all_offers.append({
                     "title": title,
                     "company": name,
                     "location": item.get("location", "") or "",
                     "country": "",
-                    "url": item.get("url") or target["url"],
+                    "url": url,
                     "description": "",
                 })
         except Exception as e:
