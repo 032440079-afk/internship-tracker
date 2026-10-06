@@ -3,11 +3,10 @@ import sys
 sys.path.insert(0, ".")
 from scrapers import company_nim_fallback as nim, company_successfactors as sf, company_workday as wd
 
-NEW_NIM = {"Mercedes-Benz", "Audi", "Bosch", "Daimler Truck", "Volvo Group", "Stellantis", "Siemens",
-           "Siemens Energy", "ABB", "Schneider Electric", "Bayer", "Henkel", "Nestle", "P&G",
-           "DHL Group", "DSV (DB Schenker)", "Kuehne+Nagel"}
-NEW_SF = {"Schaeffler", "BASF"}
-NEW_WD = {"Airbus"}
+# 2. tur: sadece ikinci partide eklenenler (ilk parti run 37465628265'te test edildi)
+NEW_NIM = {"Michelin", "Alstom", "Atlas Copco", "Signify", "Nokia"}
+NEW_SF = {"SKF", "Volvo Cars"}
+NEW_WD = {"NXP", "ZEISS"}
 
 def report(name, offers):
     print(f"RESULT | {name} | {len(offers)} ilan")
