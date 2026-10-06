@@ -39,6 +39,14 @@ RELEVANT_KEYWORDS = [
     "wirtschaftsingenieur",
     "prozessoptimierung",
     "optimierung",
+    # Satin alma ve kalite
+    "einkauf",
+    "beschaffung",
+    "procurement",
+    "purchasing",
+    "qualität",
+    "qualitaet",
+    "quality",
 ]
 
 # İşimize yaramayan ama bu kaynaklarda sık çıkan gürültü kelimeleri (opsiyonel ek filtre)
