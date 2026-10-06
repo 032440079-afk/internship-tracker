@@ -21,14 +21,11 @@ TARGETS = [
 ]
 
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
-# meta/llama-3.3-70b-instruct 2026-08-26'da kaldirildi (HTTP 410). Model ileride
+# Llama 3.3 70B ve Nemotron Super 49B 2026-08-26'da kaldirildi (HTTP 410). Model ileride
 # yine kalkarsa kod degistirmeden NIM_MODEL ortam degiskeniyle degistirilebilir.
-NIM_MODEL = os.environ.get("NIM_MODEL") or "nvidia/llama-3.3-nemotron-super-49b-v1"
+NIM_MODEL = os.environ.get("NIM_MODEL") or "nvidia/nemotron-3.5-lightning-30b-a3b"
 
-# "detailed thinking off": Nemotron'un akil yurutme modunu kapatir, cevap direkt JSON olur.
-SYSTEM_PROMPT = """detailed thinking off
-
-Sen bir bilgi cikarma motorusun. Sana bir sirket kariyer sayfasinin gorunur metni verilecek. Erasmus+ veya J-1 staj basvurusuna uyabilecek her staj/working student/thesis/trainee ilanini cikart. Tam zamanli, kidemli ve yonetici pozisyonlarini yoksay. SADECE bu JSON semasina uyan bir obje ile cevap ver, aciklama veya markdown ekleme:
+SYSTEM_PROMPT = """Sen bir bilgi cikarma motorusun. Sana bir sirket kariyer sayfasinin gorunur metni verilecek. Erasmus+ veya J-1 staj basvurusuna uyabilecek her staj/working student/thesis/trainee ilanini cikart. Tam zamanli, kidemli ve yonetici pozisyonlarini yoksay. SADECE bu JSON semasina uyan bir obje ile cevap ver, aciklama veya markdown ekleme:
 
 {"listings": [{"title": "string", "location": "string or null", "url": "string"}]}
 
@@ -57,6 +54,8 @@ def _extract_listings(page_text: str, company: str) -> list[dict]:
         ],
         temperature=0.0,
         max_tokens=4096,
+        # Akil yurutme modu kapali: token butcesi dusunmeye gitmesin, cevap direkt JSON olsun.
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
     )
     data = _parse_json(response.choices[0].message.content or "")
     return data.get("listings", [])
