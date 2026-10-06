@@ -1,5 +1,5 @@
 """
-Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF, Novartis, Sanofi, GSK, AstraZeneca, Philips).
+Workday tabanli kariyer sitelerini tarar (KION Group, Roche, Unilever, ASML, Maersk, LEGO, Electrolux, Kone, TRUMPF, Novartis, Sanofi, GSK, AstraZeneca, Philips, Airbus, NXP, ZEISS, Valeo).
 
 Workday, kimlik dogrulamasi gerektirmeyen genel bir JSON API sunar:
   POST https://<tenant>.<wd_host>.myworkdayjobs.com/wday/cxs/<tenant>/<site>/jobs
@@ -25,10 +25,14 @@ COMPANIES = [
     {"name": "GSK", "tenant": "gsk", "wd_host": "wd5", "site": "GSKCareers"},
     {"name": "AstraZeneca", "tenant": "astrazeneca", "wd_host": "wd3", "site": "Careers"},
     {"name": "Philips", "tenant": "philips", "wd_host": "wd3", "site": "jobs-and-careers"},
+    {"name": "Airbus", "tenant": "ag", "wd_host": "wd3", "site": "Airbus"},
+    {"name": "NXP", "tenant": "nxp", "wd_host": "wd3", "site": "careers"},
+    {"name": "ZEISS", "tenant": "zeissgroup", "wd_host": "wd3", "site": "External"},
+    {"name": "Valeo", "tenant": "valeo", "wd_host": "wd3", "site": "valeo_jobs"},
 ]
 
 RESULTS_PER_PAGE = 20
-MAX_PAGES = 30
+MAX_PAGES = 100  # 30 sayfa (600 ilan) Airbus/NXP/ZEISS gibi buyuk sirketlerde yetmiyordu
 
 
 def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: requests.Session):
