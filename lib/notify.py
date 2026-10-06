@@ -37,6 +37,24 @@ async def _send_all(text: str):
             print(f"[notify] chat_id={chat_id} için mesaj gönderilemedi: {e}")
 
 
+async def _send_documents(paths: list[str], caption: str):
+    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_IDS:
+        return
+    bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
+    for chat_id in config.TELEGRAM_CV_CHAT_IDS:
+        for path in paths:
+            try:
+                with open(path, "rb") as f:
+                    await bot.send_document(chat_id=chat_id, document=f, caption=caption)
+            except Exception as e:
+                print(f"[notify] chat_id={chat_id} için dosya gönderilemedi: {e}")
+
+
 def notify_new_offer(offer: dict):
     text = _format_message(offer)
     asyncio.run(_send_all(text))
+
+
+def send_application_files(offer: dict, paths: list[str]):
+    caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"[:1000]
+    asyncio.run(_send_documents(paths, caption))
