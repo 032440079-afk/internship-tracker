@@ -1,10 +1,11 @@
-"""Yeni/duzeltilmis kaynaklari ve alternatif adresleri dener; Firestore/Telegram'a dokunmaz. Gecici kontrol scripti."""
+"""4. tur: yeni aday sirketleri ve adres alternatiflerini dener; Firestore/Telegram'a dokunmaz. Gecici kontrol scripti."""
 import re
 import sys
 import requests
 sys.path.insert(0, ".")
 from lib.config import REQUEST_HEADERS
-from scrapers import company_nim_fallback as nim, company_successfactors as sf, company_workday as wd, company_smartrecruiters as sr
+from scrapers import (company_nim_fallback as nim, company_successfactors as sf, company_workday as wd,
+                      company_smartrecruiters as sr, company_greenhouse as gh)
 
 
 def report(name, offers):
@@ -13,61 +14,51 @@ def report(name, offers):
         print(f"    - {o.get('title')} | {o.get('location')} | {o.get('url')}", flush=True)
 
 
-def run_nim(name, url):
-    orig = nim.TARGETS
-    nim.TARGETS = [{"name": name, "url": url}]
+def swap(mod, attr, items, label):
+    orig = getattr(mod, attr)
+    setattr(mod, attr, items)
     try:
-        report(f"{name} [nim] {url}", nim.scrape())
+        report(label, mod.scrape())
     finally:
-        nim.TARGETS = orig
+        setattr(mod, attr, orig)
 
 
-def run_sf(name, search_url, base_url):
+def probe_get(label, url):
     try:
-        r = requests.get(search_url, headers=REQUEST_HEADERS, timeout=25)
-        links = len(re.findall(r'href="[^"]*/job/', r.text))
-        print(f"PROBE | {name} [sf] {search_url} | status={r.status_code} final={r.url} /job/-links={links}", flush=True)
+        r = requests.get(url, headers=REQUEST_HEADERS, timeout=25)
+        print(f"PROBE | {label} | status={r.status_code} final={r.url}", flush=True)
     except Exception as e:
-        print(f"PROBE | {name} [sf] {search_url} | HATA {e}", flush=True)
-    orig = sf.COMPANIES
-    sf.COMPANIES = [{"name": name, "search_url": search_url, "base_url": base_url}]
-    try:
-        report(f"{name} [sf] {search_url}", sf.scrape())
-    finally:
-        sf.COMPANIES = orig
+        print(f"PROBE | {label} | HATA {e}", flush=True)
 
 
-def run_wd(name, tenant, host, site):
-    orig = wd.COMPANIES
-    wd.COMPANIES = [{"name": name, "tenant": tenant, "wd_host": host, "site": site}]
-    try:
-        report(f"{name} [wd] {tenant}/{site}", wd.scrape())
-    finally:
-        wd.COMPANIES = orig
+# SuccessFactors
+for name, host in [("DACHSER", "https://careers.dachser.com"), ("Hapag-Lloyd", "https://jobs.hapag-lloyd.com"),
+                   ("MAHLE", "https://careers.mahle.com")]:
+    swap(sf, "COMPANIES", [{"name": name, "search_url": f"{host}/search/", "base_url": host}], f"{name} [sf]")
 
+# Workday: kok adres hangi site'a yonleniyor + aday site isimleri
+for tenant, sites in [("renault", ["Renault_Group", "RenaultGroup", "Careers", "External", "Renault"]),
+                      ("valeo", ["valeo_jobs", "Valeo", "Careers", "External", "Valeo_Careers"])]:
+    probe_get(f"{tenant} workday root", f"https://{tenant}.wd3.myworkdayjobs.com/")
+    for site in sites:
+        swap(wd, "COMPANIES", [{"name": tenant, "tenant": tenant, "wd_host": "wd3", "site": site}], f"{tenant} [wd] {site}")
 
-# 1) Kesin duzeltmeler
-report("Bosch [smartrecruiters]", sr.scrape())
-run_sf("Volvo Group", "https://jobs.volvogroup.com/search/", "https://jobs.volvogroup.com")
-run_wd("Airbus (600 siniri kalkti mi)", "ag", "wd3", "Airbus")
+# SmartRecruiters (IKEA) ve Greenhouse (AB InBev)
+for cid in ("IKEA", "Ingka", "IngkaGroup", "IKEAGroup"):
+    swap(sr, "COMPANIES", [{"name": "IKEA", "company_id": cid}], f"IKEA [sr] {cid}")
+report("AB InBev [greenhouse]", gh.scrape())
 
-# 2) 0 gelenler icin alternatifler
-for site in ("External_Career_Site", "Stellantis", "Careers", "External", "stellantis_careers"):
-    run_wd("Stellantis", "stellantis", "wd3", site)
-for site in ("Nokia", "External", "Careers"):
-    run_wd("Nokia", "nokia", "wd3", site)
-run_sf("Nestle", "https://jobdetails.nestle.com/search/", "https://jobdetails.nestle.com")
-run_sf("BASF", "https://basf.jobs/search/", "https://basf.jobs")
-
+# Yapay zeka yolu
 for name, url in [
-    ("Nokia", "https://careers.nokia.com/jobs"),
-    ("Nestle", "https://www.nestle.com/jobs/search-jobs"),
-    ("BASF", "https://basf.jobs/search/?q=intern"),
-    ("Michelin", "https://jobs.michelinman.com/job-offer-result-list"),
-    ("Michelin", "https://recrutement.michelin.fr/job-offer-result-list"),
-    ("Schneider Electric", "https://careers.se.com/jobs"),
-    ("Schneider Electric", "https://www.se.com/ww/en/about-us/careers/job-search/"),
-    ("Audi", "https://www.audi.com/de/karriere/jobs.html"),
-    ("Audi", "https://www.audi.com/en/careers/jobs.html"),
+    ("Thales", "https://careers.thalesgroup.com/global/en/search-results?keywords=intern"),
+    ("L'Oreal", "https://careers.loreal.com/en_US/jobs/SearchJobs/intern"),
+    ("Danone", "https://careers.danone.com/en-global/jobs.html"),
+    ("Safran", "https://www.safran-group.com/jobs"),
+    ("Rolls-Royce", "https://careers.rolls-royce.com/search-jobs/intern"),
+    ("Saint-Gobain", "https://joinus.saint-gobain.com/en/search?keywords=intern"),
+    ("Liebherr", "https://www.liebherr.com/en-int/career/job-vacancies"),
+    ("Ferrero", "https://www.ferrerocareers.com/int/en/jobs"),
+    ("Orsted", "https://orsted.com/en/careers/vacancies-list"),
+    ("Valeo", "https://www.valeo.com/en/offers/list/"),
 ]:
-    run_nim(name, url)
+    swap(nim, "TARGETS", [{"name": name, "url": url}], f"{name} [nim] {url}")

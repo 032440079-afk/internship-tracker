@@ -27,6 +27,7 @@ SCRAPER_MODULES = [
     "scrapers.company_successfactors",
     "scrapers.company_workday",
     "scrapers.company_smartrecruiters",
+    "scrapers.company_greenhouse",
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]
