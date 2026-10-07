@@ -20,7 +20,7 @@ TELEGRAM_CV_CHAT_IDS = [
     c.strip() for c in os.environ.get("TELEGRAM_CV_CHAT_IDS", "").split(",") if c.strip()
 ] or TELEGRAM_CHAT_IDS
 # Bir calismada en fazla kac ilan icin CV + on yazi uretilecegi (calisma suresini sinirlamak icin)
-MAX_APPLICATIONS_PER_RUN = int(os.environ.get("MAX_APPLICATIONS_PER_RUN", "30"))
+MAX_APPLICATIONS_PER_RUN = int(os.environ.get("MAX_APPLICATIONS_PER_RUN", "80"))
 
 # Alakalı ilanları filtrelemek için anahtar kelimeler (küçük harfe çevrilip aranır)
 RELEVANT_KEYWORDS = [
