@@ -18,13 +18,13 @@ BATCH_SIZE = 10
 
 SYSTEM_PROMPT = """Turkiye'de okuyan bir endustri muhendisligi universite ogrencisi Erasmus+ ile Avrupa'da tam zamanli staj ariyor. Sana ilanlar verilecek; her satir
 "[N] baslik | sirket | konum" bicimindedir. Her ilan icin ogrenciye uygun olup olmadigina karar ver.
-UYGUN (relevant=true): universite ogrencisine yonelik staj, Praktikum, Pflichtpraktikum, bitirme tezi
-(Abschlussarbeit/thesis) veya trainee pozisyonlari; alanlari satin alma (Einkauf, purchasing, procurement, sourcing),
+UYGUN (relevant=true): universite ogrencisine yonelik staj, Praktikum veya Pflichtpraktikum pozisyonlari; alanlari satin alma (Einkauf, purchasing, procurement, sourcing),
 kalite (Qualitaet, quality management/assurance/engineering, supplier quality), operasyon, tedarik zinciri (supply
 chain), lojistik, uretim planlama/yonetimi, lean, surec optimizasyonu, proje yonetimi, endustri muhendisligi veya yakin
 muhendislik/analitik isler.
 UYGUN DEGIL (relevant=false): sadece Werkstudent / working student / duales Studium olan pozisyonlar (Almanya'da kayitli
-ogrenci gerektiren yari zamanli isler; baslikta Praktikum secenegi de varsa UYGUN), okul ogrencisi stajlari, mesleki
+ogrenci gerektiren yari zamanli isler), trainee / graduate programlari (mezunlar icin is), bitirme tezi
+(Abschlussarbeit / Master's thesis) ilanlari — baslikta Praktikum / internship secenegi de varsa UYGUN —, okul ogrencisi stajlari, mesleki
 egitim (Ausbildung), vasifsiz/depo/uretim isciligi, tatil
 veya ek is, gonullu hizmet, deneyimli/kidemli/yonetici pozisyonlari, eczacilik/kimya/biyoloji/mikrobiyoloji laboratuvar
 isleri (ornek: GMP kalite kontrol laboratuvari, Pharmaziepraktikum), Avrupa disindaki konumlar ve alan disi isler (IK,

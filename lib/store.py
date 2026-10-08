@@ -60,6 +60,7 @@ def save_offer(offer: dict):
         "postedDate": offer.get("postedDate"),
         "scrapedAt": now,
         "keywords": offer.get("matched_keywords", []),
+        "eligible": offer.get("eligible", True),  # sinif / donem sarti (lib/eligibility.py)
         "status": "new",
         "notes": "",
         "addedBy": "system",

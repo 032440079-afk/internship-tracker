@@ -15,7 +15,7 @@ import argparse
 import importlib
 import traceback
 
-from lib import store, notify, export_html, ai_filter, application, config
+from lib import store, notify, export_html, ai_filter, application, config, eligibility
 from lib.filters import is_relevant
 from lib.job_details import JobPageReader
 
@@ -37,10 +37,17 @@ SCRAPER_MODULES = [
 ]
 
 
-def _send_application(offer: dict, reader: JobPageReader):
+def _read_job_text(reader: JobPageReader, url: str) -> str:
+    try:
+        return reader.read(url)
+    except Exception as e:
+        print(f"    [SAYFA-HATA] {type(e).__name__}")
+        return ""
+
+
+def _send_application(offer: dict, job_text: str):
     """Ilana gore CV + on yazi uretip Telegram'a gonderir. Icerik loglanmaz (Actions loglari herkese acik)."""
     try:
-        job_text = reader.read(offer["url"])
         files = application.build_application(offer, job_text)
         paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
         notify.send_application_files(offer, paths)
@@ -53,6 +60,7 @@ def _send_application(offer: dict, reader: JobPageReader):
 def run(dry_run: bool = False, only_source: str | None = None):
     total_found = 0
     total_new = 0
+    total_ineligible = 0
     applications_made = 0
     reader = None
     make_applications = not dry_run and application.available()
@@ -93,17 +101,27 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
         # Anahtar kelime filtresinden geçen yeni ilanları yapay zekâyla ikinci kez ele
         for offer in ai_filter.filter_offers(candidates):
-            total_new += 1
             if dry_run:
+                total_new += 1
                 print(f"  [YENİ-DRY] {offer['title']} — {offer.get('company')} — {offer['url']}")
                 continue
-            store.save_offer(offer)
+            # Ilan metni: sinif / donem sarti kontrolu ve CV uyarlamasi icin
+            job_text = ""
+            if config.NVIDIA_API_KEY:
+                if reader is None:
+                    reader = JobPageReader().__enter__()
+                job_text = _read_job_text(reader, offer["url"])
+            offer["eligible"], reason = eligibility.check(offer, job_text)
+            store.save_offer(offer)  # uygun olmasa da kaydedilir ki her gun yeniden kontrol edilmesin
+            if not offer["eligible"]:
+                total_ineligible += 1
+                print(f"  [SINIF-ŞARTI] {offer['title']} — {offer.get('company')} — {reason}")
+                continue
+            total_new += 1
             notify.notify_new_offer(offer)
             print(f"  [YENİ] {offer['title']} — {offer.get('company')}")
             if make_applications and applications_made < config.MAX_APPLICATIONS_PER_RUN:
-                if reader is None:
-                    reader = JobPageReader().__enter__()
-                _send_application(offer, reader)
+                _send_application(offer, job_text)
                 applications_made += 1
 
         # Tarayiciyi kaynak bitince kapat: sonraki scraper'lar kendi Playwright'larini acabilsin
@@ -111,7 +129,8 @@ def run(dry_run: bool = False, only_source: str | None = None):
             reader.__exit__(None, None, None)
             reader = None
 
-    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | CV üretilen: {applications_made}")
+    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | Sınıf şartıyla elenen: {total_ineligible}"
+          f" | CV üretilen: {applications_made}")
 
     if not dry_run:
         try:

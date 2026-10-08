@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timezone
 from lib import store
-from lib.filters import is_europe_location, is_student_job_only
+from lib.filters import is_europe_location, is_non_internship_role
 OUTPUT_PATH = "docs/index.html"
 
 def _fetch_all_offers() -> list[dict]:
@@ -18,7 +18,8 @@ def _fetch_all_offers() -> list[dict]:
     for doc in docs:
         d = doc.to_dict()
         scraped = d.get("scrapedAt")
-        if not is_europe_location(d.get("location", "")) or is_student_job_only(d.get("title", "")):
+        if not is_europe_location(d.get("location", "")) or is_non_internship_role(d.get("title", "")) \
+                or d.get("eligible") is False:
             continue
         offers.append({
             "title": d.get("title", ""), "company": d.get("company", ""),

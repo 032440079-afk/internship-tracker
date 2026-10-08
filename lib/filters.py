@@ -6,10 +6,16 @@ import re
 
 from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS
 
-# Werkstudent / working student ve duales Studium, Almanya'daki bir universiteye kayitli ogrenciler icin yari zamanli
-# isler / ders programlaridir; Erasmus ile tam zamanli staj arayan Kaan'a uymaz. Baslikta staj secenegi de varsa
-# ("Praktikant / Werkstudent") ilan tutulur.
-_STUDENT_JOB_TERMS = ("werkstudent", "working student", "studentische hilfskraft", "student assistant", "duales studium")
+# Kaan Turkiye'de okuyup Erasmus+ ile tam zamanli staj ariyor. Su ilanlar ona uymaz:
+#  - Werkstudent / working student: Almanya'daki bir universiteye kayitli ogrenciler icin yari zamanli is
+#  - duales Studium: Almanya'da bir lisans programi
+#  - trainee / graduate programlari: mezunlar icin tam zamanli is
+#  - bitirme tezi (Abschlussarbeit / thesis): cogunlukla son sinif veya master ogrencisi ister
+# Baslikta staj secenegi de varsa ("Praktikant / Werkstudent", "Praktikum oder Abschlussarbeit") ilan tutulur.
+_NON_INTERNSHIP_TERMS = (
+    "werkstudent", "working student", "studentische hilfskraft", "student assistant", "duales studium",
+    "trainee", "graduate program", "thesis", "abschlussarbeit", "masterarbeit", "bachelorarbeit",
+)
 _INTERNSHIP_IN_TITLE = re.compile(r"praktik|\bintern(ship)?s?\b|\bstage\b|stagiair|stajyer")
 
 
@@ -24,17 +30,17 @@ def is_europe_location(location: str) -> bool:
     loc = (location or "").lower()
     return not any(kw in loc for kw in NON_EUROPE_KEYWORDS)
 
-def is_student_job_only(title: str) -> bool:
-    """Basligi sadece Werkstudent / duales Studium olan (staj secenegi sunmayan) ilanlar."""
+def is_non_internship_role(title: str) -> bool:
+    """Basligi Werkstudent / duales Studium / trainee / tez olan ve staj secenegi sunmayan ilanlar."""
     t = (title or "").lower()
-    return any(term in t for term in _STUDENT_JOB_TERMS) and not _INTERNSHIP_IN_TITLE.search(t)
+    return any(term in t for term in _NON_INTERNSHIP_TERMS) and not _INTERNSHIP_IN_TITLE.search(t)
 
 
 def is_relevant(title: str, description: str = "", location: str = "") -> tuple[bool, list[str]]:
     text = f"{title} {description}".lower()
     if not is_europe_location(location):
         return False, []
-    if is_student_job_only(title):
+    if is_non_internship_role(title):
         return False, []
     for bad in EXCLUDE_KEYWORDS:
         if bad in text:
