@@ -72,6 +72,8 @@ EXCLUDE_KEYWORDS = [
     "hr operations", "people operations", "it operations", "tax operations", "legal operations",
     "treasury operations", "fund operations", "sales operations", "store operations", "cabin operations",
     "finance operations", "financial markets", "platform operations",
+    # Basliginda "operations" gecen ama alan disi olan ilanlar (Amazon HR / IT / veri merkezi stajlari)
+    "human resources", "it support", "data center", "marketing", "pharmaziepraktikum",
 ]
 
 # Sadece staj/ogrenci pozisyonlarini kabul etmek icin gerekli anahtar kelimeler
