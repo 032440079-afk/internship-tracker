@@ -3,9 +3,16 @@ permissions:
   contents: write
 on:
   schedule:
-    # Her gün UTC 06:00 = Türkiye saatiyle yaz saatinde 09:00 civarı
-    - cron: "0 6 * * *"
+    # GitHub zamanlanmis isleri gecikmeli baslatir; saat basi (:00) en yogun ve en cok geciken an. Bu yuzden
+    # erken bir saat ve rastgele bir dakika: UTC 02:17 = Turkiye saatiyle 05:17. Gecikse bile sabah biter.
+    - cron: "17 2 * * *"
   workflow_dispatch: {}   # Actions sekmesinden manuel de tetiklenebilir
+
+# Ayni anda iki calisma olmasin (ornegin zamanlanmis + elle baslatilan): ikincisi birincinin bitmesini bekler,
+# boylece ayni ilan iki kez bildirilmez.
+concurrency:
+  group: daily-scrape
+  cancel-in-progress: false
 
 jobs:
   scrape:
@@ -50,8 +57,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Calisma surerken main'e yeni commit gelmis olabilir: sadece dashboard'u en guncel main'in ustune koy
+          git fetch -q origin main
+          git reset -q origin/main
           git add docs/index.html
-          git diff --staged --quiet || (git commit -m "Update dashboard" && git push)
+          git diff --staged --quiet || (git commit -m "Update dashboard" && git push origin HEAD:main)
 
       - name: Firebase Hosting'e deploy et
         if: success()
