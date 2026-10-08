@@ -37,6 +37,16 @@ SCRAPER_MODULES = [
 ]
 
 
+def _fix_mojibake(text: str) -> str:
+    """Kaynakta yanlis kodlanmis metni duzeltir ("stationÃ¤re" -> "stationäre")."""
+    if "Ã" not in (text or ""):
+        return text
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+
 def _read_job_text(reader: JobPageReader, url: str) -> str:
     try:
         return reader.read(url)
@@ -61,6 +71,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
     total_found = 0
     total_new = 0
     total_ineligible = 0
+    notified_titles = set()
     applications_made = 0
     reader = None
     make_applications = not dry_run and application.available()
@@ -87,6 +98,8 @@ def run(dry_run: bool = False, only_source: str | None = None):
         candidates = []
         seen_urls = set()
         for offer in offers:
+            for field in ("title", "company", "location"):
+                offer[field] = _fix_mojibake(offer.get(field, ""))
             relevant, matches = is_relevant(
                 offer.get("title", ""), offer.get("description", ""), offer.get("location", "")
             )
@@ -105,6 +118,13 @@ def run(dry_run: bool = False, only_source: str | None = None):
                 total_new += 1
                 print(f"  [YENİ-DRY] {offer['title']} — {offer.get('company')} — {offer['url']}")
                 continue
+            # Ayni sirketin ayni baslikli ilani (ornegin farkli sehirler) bir kez bildirilir; digerleri sadece kaydedilir
+            title_key = (offer["title"].strip().lower(), (offer.get("company") or "").strip().lower())
+            if title_key in notified_titles:
+                store.save_offer(offer)
+                print(f"  [TEKRAR] {offer['title']} — {offer.get('company')} — {offer.get('location')}")
+                continue
+            notified_titles.add(title_key)
             # Ilan metni: sinif / donem sarti kontrolu ve CV uyarlamasi icin
             job_text = ""
             if config.NVIDIA_API_KEY:
