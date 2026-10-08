@@ -81,13 +81,10 @@ INTERNSHIP_KEYWORDS = [
     "internship",
     "praktikum",
     "praktikant",       # Praktikant*in / Praktikant (m/w/d)
-    "werkstudent",
-    "working student",
     "trainee",
     "co-op",
     "thesis",
     "abschlussarbeit",
-    "duales studium",
     "stagiaire",
     "stajyer",
 ]
