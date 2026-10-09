@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 COMPANIES = [
         {"name": "Festo", "search_url": "https://jobs.festo.com/search/", "base_url": "https://jobs.festo.com"},
@@ -53,6 +54,8 @@ def _parse_page(html: str, company_name: str, base_url: str):
         if not title:
             continue
 
+        row = a.find_parent("tr")
+        date_el = row.select_one(".jobDate") if row else None
         offers.append({
             "title": title,
             "company": company_name,
@@ -60,6 +63,7 @@ def _parse_page(html: str, company_name: str, base_url: str):
             "country": "",
             "url": url,
             "description": "",
+            "postedDate": parse_date(date_el.get_text(" ", strip=True)) if date_el else None,
         })
 
     return offers

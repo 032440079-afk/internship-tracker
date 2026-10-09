@@ -74,3 +74,19 @@ python scrapers/erasmus_careers.py
 # Tam pipeline, dry-run (kayıt/bildirim yok, sadece ekrana yazar):
 python run.py --dry-run
 ```
+
+## Web paneli: Google ile giriş ve başvuru takibi
+
+Site (Firebase Hosting) herkese açıktır ve sadece ilan listesini gösterir. Google ile giriş yapan **izinli** hesaplar
+ek olarak kendi başvuru durumlarını (Başvurdum / Görüşme / Red / Kabul / Gizle), istatistiklerini ve (ilk hesap için)
+CV uygunluk yüzdelerini görür. Her hesabın durumları ayrıdır. Erişim `firestore.rules` ile korunur.
+
+Bir kerelik kurulum:
+1. Firebase Console → ⚙️ Project settings → General → **Your apps** → `</>` (Web) → bir isim ver → **Register app**
+   (Firebase Hosting kutusunu işaretlemeye gerek yok). Site giriş ayarlarını buradan otomatik alır.
+2. Firebase Console → **Authentication** → Get started → Sign-in method → **Google** → Enable → destek e-postası seç → Save.
+3. GitHub → repo → Settings → Secrets and variables → Actions → **New repository secret**:
+   `ALLOWED_EMAILS` = siteye girecek Gmail adresleri, virgülle (ilk adres Kaan'ın olmalı; uygunluk yüzdeleri onun CV'sine göre).
+4. Bir sonraki günlük çalıştırmadan sonra siteye girip **Google ile giriş** yap.
+5. Telegram'da her kişi kendi sohbetinden bota bir kez `/bagla adres@gmail.com` yazar; ilan bildirimlerindeki butonlar
+   o kişinin listesine yazar. `/ozet` istatistikleri gösterir.

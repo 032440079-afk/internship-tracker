@@ -7,6 +7,7 @@ amazon.jobs kimlik dogrulamasi gerektirmeyen bir arama JSON'u sunar:
 import requests
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 SEARCH_URL = "https://www.amazon.jobs/en/search.json"
 QUERIES = ["intern", "internship"]
@@ -41,6 +42,7 @@ def scrape() -> list[dict]:
                         "country": job.get("country_code", ""),
                         "url": url,
                         "description": job.get("description_short", ""),
+                        "postedDate": parse_date(job.get("posted_date")),
                     }
         except Exception as e:
             print(f"[HATA] Amazon ('{query}') scrape edilemedi: {e}")

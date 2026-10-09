@@ -1,0 +1,32 @@
+rules_version = '2';
+// Web paneli icin erisim kurallari. Sunucu tarafi (GitHub Actions, firebase-admin) bu kurallardan etkilenmez.
+// - Sadece allowed/{email} listesindeki (ALLOWED_EMAILS secret'i) Google hesaplari bir sey okuyabilir.
+// - Herkes sadece kendi basvuru durumlarini (trackers/{kendi e-postasi}) okuyup yazabilir.
+// - Ilan kayitlari, Telegram baglantilari vb. disaridan okunamaz.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedInEmail() {
+      return request.auth != null && request.auth.token.email_verified == true
+        ? request.auth.token.email.lower() : '';
+    }
+    function isAllowed() {
+      return signedInEmail() != ''
+        && exists(/databases/$(database)/documents/allowed/$(signedInEmail()));
+    }
+
+    match /allowed/{email} {
+      allow read: if isAllowed() && email == signedInEmail();
+    }
+    match /matches/{offerId} {
+      allow read: if isAllowed();
+    }
+    match /trackers/{email}/applications/{offerId} {
+      allow read, delete: if isAllowed() && email == signedInEmail();
+      allow create, update: if isAllowed() && email == signedInEmail()
+        && request.resource.data.status in ['applied', 'interview', 'rejected', 'offer', 'skip'];
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

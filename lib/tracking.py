@@ -1,18 +1,23 @@
 """
-Basvuru takibi: Kaan her ilan bildiriminin altindaki butonlarla (Basvurdum / Gorusme / Red / Kabul / Ilgilenmiyorum)
-ilanin durumunu isaretler; durumlar Firestore'daki ilan kaydina yazilir.
+Basvuru takibi. Kaan ve kiz arkadasi ayni ilanlari gorur ama durumlari (Basvurdum / Gorusme / Red / Kabul /
+Ilgilenmiyorum) kisiye ozeldir: Firestore'da trackers/{email}/applications/{ilan_id} altinda tutulur.
 
-Telegram butona basildiginda haberi bot'a birakir; sunucumuz olmadigi icin bu haberler saatlik bir GitHub Actions
-isiyle (track.py) ve gunluk taramanin basinda toplanir. Telegram bekleyen haberleri 24 saat saklar.
+Iki yerden isaretlenebilir:
+  - Web paneli (Google ile giris; sadece ALLOWED_EMAILS'taki hesaplar) dogrudan Firestore'a yazar.
+  - Telegram: ilan bildirimlerinin altindaki butonlar. Sunucumuz olmadigi icin buton basmalari saatlik bir GitHub
+    Actions isiyle (track.py) ve gunluk taramanin basinda toplanir. Telegram bekleyen haberleri 24 saat saklar.
+    Her Telegram sohbeti bir kez "/bagla e-posta" ile kendi hesabina baglanir.
 
-Durumlar sadece Firestore'da ve Telegram'da durur; herkese acik dashboard'a / repoya yazilmaz.
+Durumlar sadece Firestore'da ve Telegram'da durur; herkese acik site koduna / repoya yazilmaz.
 
-Telegram'dan yazilabilecek komutlar:
+Telegram komutlari:
+  /bagla <e-posta>          -> bu sohbeti hesaba bagla (e-posta ALLOWED_EMAILS'ta olmali)
   /ozet                     -> basvuru istatistikleri
-  <ilan linki> basvurdum    -> butonu olmayan eski bildirimler icin durum isaretleme (gorusme / red / kabul da olur)
+  <ilan linki> basvurdum    -> butonu olmayan eski bildirimler icin durum (gorusme / red / kabul / ilgilenmiyorum)
   /yardim                   -> kullanim
 """
 import html
+import os
 import re
 from datetime import datetime, timezone
 
@@ -30,6 +35,9 @@ STATUSES = {
 }
 APPLIED_STATUSES = ("applied", "interview", "rejected", "offer")  # hepsi "basvuru yapildi" sayilir
 
+# Siteye girebilecek hesaplar; ilk e-posta Kaan (uygunluk skorlari onun CV'sine gore)
+ALLOWED_EMAILS = [e.strip().lower() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()]
+
 # Serbest metinde durum kelimeleri (Turkce karakterli / karaktersiz)
 _TEXT_STATUS = [
     (r"ba[sş]vurdum|applied", "applied"),
@@ -40,9 +48,11 @@ _TEXT_STATUS = [
 ]
 
 HELP = ("ℹ️ <b>Başvuru takibi</b>\n"
+        "• İlk kez: <code>/bagla senin@gmail.com</code> yaz (siteye girdiğin Google hesabı).\n"
         "• Her ilan bildiriminin altındaki butonlara bas (en geç ~1 saat içinde kaydedilir, buton ✅ olur).\n"
         "• Butonu olmayan eski ilanlar için: ilan linkini yapıştırıp yanına <i>başvurdum / görüşme / red / kabul</i> yaz.\n"
-        "• /ozet → başvuru istatistiklerin")
+        "• /ozet → başvuru istatistiklerin\n"
+        "• Aynı durumları web sitesinde de görüp değiştirebilirsin.")
 
 
 def keyboard(doc_id: str, current: str | None = None) -> InlineKeyboardMarkup:
@@ -69,15 +79,15 @@ def _parse_text_status(text: str) -> tuple[str | None, str | None]:
 
 # ---------- istatistik ----------
 
-def stats() -> dict:
-    offers = store.offers_with_status(list(APPLIED_STATUSES))
+def stats(email: str) -> dict:
+    apps = [a for a in store.applications(email) if a.get("status") in APPLIED_STATUSES]
     now = datetime.now(timezone.utc)
     counts = {s: 0 for s in APPLIED_STATUSES}
     pending = []
-    for o in offers:
-        counts[o["status"]] += 1
-        if o["status"] == "applied" and o.get("statusUpdatedAt"):
-            pending.append((o, (now - o["statusUpdatedAt"]).days))
+    for a in apps:
+        counts[a["status"]] += 1
+        if a["status"] == "applied" and a.get("updatedAt"):
+            pending.append((a, (now - a["updatedAt"]).days))
     total = sum(counts.values())
     answered = counts["interview"] + counts["rejected"] + counts["offer"]
     return {
@@ -102,19 +112,26 @@ def format_stats(s: dict) -> str:
         lines.append("<i>Henüz az veri var; oranlar ~10+ başvurudan sonra anlamlı olur.</i>")
     if s["oldest_pending"]:
         lines.append("\n⏳ En uzun süredir cevap beklenenler:")
-        for o, days in s["oldest_pending"]:
-            lines.append(f"• {html.escape(o.get('title', ''))} — {html.escape(o.get('company', ''))} ({days} gün)")
+        for a, days in s["oldest_pending"]:
+            lines.append(f"• {html.escape(a.get('title', ''))} — {html.escape(a.get('company', ''))} ({days} gün)")
     return "\n".join(lines)
 
 
 # ---------- Telegram guncellemelerini isleme ----------
 
-async def _handle_callback(bot: Bot, cq) -> bool:
+NOT_LINKED = "🔗 Bu sohbet henüz bir hesaba bağlı değil. Önce <code>/bagla senin@gmail.com</code> yaz."
+
+
+async def _handle_callback(bot: Bot, cq, links: dict) -> bool:
     try:
         _, doc_id, status = cq.data.split(":", 2)
     except (AttributeError, ValueError):
         return False
-    if status not in STATUSES or not store.update_status(doc_id, status):
+    email = links.get(str(cq.message.chat.id))
+    if not email:
+        await bot.send_message(chat_id=cq.message.chat.id, text=NOT_LINKED, parse_mode=ParseMode.HTML)
+        return False
+    if status not in STATUSES or store.set_application_status(email, doc_id, status) is None:
         return False
     try:
         await bot.answer_callback_query(cq.id, text=f"Kaydedildi: {STATUSES[status]}")
@@ -128,25 +145,37 @@ async def _handle_callback(bot: Bot, cq) -> bool:
     return True
 
 
-async def _handle_message(bot: Bot, msg) -> bool:
+async def _handle_message(bot: Bot, msg, links: dict) -> bool:
     text = (msg.text or "").strip()
-    reply = None
-    changed = False
-    if text.lower().lstrip("/").startswith(("ozet", "özet")):
-        reply = format_stats(stats())
-    elif text.lower().lstrip("/").startswith(("yardim", "yardım", "start", "help")):
+    command = text.lower().lstrip("/")
+    chat_id = str(msg.chat.id)
+    email = links.get(chat_id)
+    reply, changed = None, False
+    if command.startswith(("bagla", "bağla")):
+        given = (text.split(maxsplit=1)[1:] or [""])[0].strip().lower()
+        if given in ALLOWED_EMAILS:
+            store.link_telegram(chat_id, given)
+            links[chat_id] = given
+            reply = f"✅ Bu sohbet <b>{html.escape(given)}</b> hesabına bağlandı. Butonlar artık senin listene yazacak."
+        else:
+            reply = "⚠️ Bu e-posta izinli hesaplar arasında yok. Siteye girdiğin Google hesabını yaz: /bagla adres@gmail.com"
+    elif command.startswith(("ozet", "özet")):
+        reply = format_stats(stats(email)) if email else NOT_LINKED
+    elif command.startswith(("yardim", "yardım", "start", "help")):
         reply = HELP
     else:
         url, status = _parse_text_status(text)
         if url and status:
-            doc_id = store.url_hash(url)
-            if store.update_status(doc_id, status):
-                offer = store.get_offer(doc_id) or {}
-                reply = (f"✅ Kaydedildi: {STATUSES[status]} — {html.escape(offer.get('title', ''))}"
-                         f" ({html.escape(offer.get('company', ''))})")
-                changed = True
+            if not email:
+                reply = NOT_LINKED
             else:
-                reply = "⚠️ Bu link kayıtlı ilanlar arasında yok. Bildirimdeki 'İlana git' linkini aynen yapıştır."
+                offer = store.set_application_status(email, store.url_hash(url), status)
+                if offer is not None:
+                    reply = (f"✅ Kaydedildi: {STATUSES[status]} — {html.escape(offer.get('title', ''))}"
+                             f" ({html.escape(offer.get('company', ''))})")
+                    changed = True
+                else:
+                    reply = "⚠️ Bu link kayıtlı ilanlar arasında yok. Bildirimdeki 'İlana git' linkini aynen yapıştır."
     if reply:
         await bot.send_message(chat_id=msg.chat.id, text=reply, parse_mode=ParseMode.HTML,
                                disable_web_page_preview=True)
@@ -158,18 +187,38 @@ async def process_updates() -> int:
     if not config.TELEGRAM_BOT_TOKEN:
         return 0
     allowed = _allowed_chats()
+    links = store.telegram_links()
     changed = 0
     async with Bot(token=config.TELEGRAM_BOT_TOKEN) as bot:
         updates = await bot.get_updates(timeout=0, allowed_updates=["callback_query", "message"])
         for u in updates:
             try:
                 if u.callback_query and str(u.callback_query.message.chat.id) in allowed:
-                    changed += await _handle_callback(bot, u.callback_query)
+                    changed += await _handle_callback(bot, u.callback_query, links)
                 elif u.message and str(u.message.chat.id) in allowed:
-                    changed += await _handle_message(bot, u.message)
+                    changed += await _handle_message(bot, u.message, links)
             except Exception as e:
                 print(f"[tracking] guncelleme islenemedi: {type(e).__name__}")
         if updates:  # islenenleri Telegram'a onayla ki bir daha gelmesin
             await bot.get_updates(offset=updates[-1].update_id + 1, timeout=0)
     print(f"[tracking] {len(updates)} guncelleme, {changed} durum degisikligi")
     return changed
+
+
+async def send_weekly_summaries():
+    """Her bagli Telegram sohbetine kendi hesabinin ozetini gonderir."""
+    if not config.TELEGRAM_BOT_TOKEN:
+        return
+    async with Bot(token=config.TELEGRAM_BOT_TOKEN) as bot:
+        for chat_id, email in store.telegram_links().items():
+            try:
+                await bot.send_message(chat_id=chat_id, text="🗓 Haftalık özet\n" + format_stats(stats(email)),
+                                       parse_mode=ParseMode.HTML)
+            except Exception as e:
+                print(f"[tracking] haftalik ozet gonderilemedi: {type(e).__name__}")
+
+
+def sync_allowed():
+    """ALLOWED_EMAILS secret'ini Firestore'daki erisim listesine yazar (site girisi icin)."""
+    if ALLOWED_EMAILS:
+        store.sync_allowed(ALLOWED_EMAILS)

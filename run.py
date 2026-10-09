@@ -62,6 +62,8 @@ def _send_application(offer: dict, job_text: str):
         files = application.build_application(offer, job_text)
         paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
         notify.send_application_files(offer, paths, files["match"])
+        if files["match"]:
+            store.save_match(store.url_hash(offer["url"]), files["match"])
         score = f"%{files['match']['score']}" if files["match"] else "-"
         print(f"    [CV] {files['changes']} bölüm uyarlandı, uygunluk: {score}, ön yazı: {'var' if files['cover_letter'] else 'yok'}"
               f" (çıkarılan cümle: {files['letter_sentences_removed']}, ilan metni: {len(job_text)} karakter)")
@@ -80,6 +82,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
     if not dry_run:
         # Saatlik takip isi gecikirse diye: bekleyen "Basvurdum / Gorusme ..." buton basmalarini burada da isle
         try:
+            tracking.sync_allowed()
             notify._run(tracking.process_updates())
         except Exception as e:
             print(f"[tracking] islenemedi: {type(e).__name__}")
@@ -100,7 +103,8 @@ def run(dry_run: bool = False, only_source: str | None = None):
             traceback.print_exc()
             continue
 
-        print(f"{len(offers)} ilan bulundu (filtre öncesi)")
+        dated = sum(1 for o in offers if o.get("postedDate"))
+        print(f"{len(offers)} ilan bulundu (filtre öncesi), {dated} tanesinde yayın tarihi var")
         total_found += len(offers)
 
         candidates = []
@@ -163,9 +167,9 @@ def run(dry_run: bool = False, only_source: str | None = None):
     if ineligible:
         notify.send_ineligible_summary(ineligible)
 
-    if not dry_run and datetime.now().weekday() == 0:  # pazartesi: haftalik basvuru ozeti
+    if not dry_run and datetime.now().weekday() == 0:  # pazartesi: herkese kendi haftalik basvuru ozeti
         try:
-            notify.send_text(tracking.format_stats(tracking.stats()))
+            notify._run(tracking.send_weekly_summaries())
         except Exception as e:
             print(f"[tracking] ozet gonderilemedi: {type(e).__name__}")
 

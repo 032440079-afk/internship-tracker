@@ -7,6 +7,7 @@ SmartRecruiters kimlik dogrulamasi gerektirmeyen genel bir Posting API sunar:
 import requests
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 COMPANIES = [
     {"name": "Bosch", "company_id": "BoschGroup"},
@@ -45,6 +46,7 @@ def _scrape_company(name: str, company_id: str, session: requests.Session):
                 "country": loc.get("country", ""),
                 "url": f"https://jobs.smartrecruiters.com/{company_id}/{job_id}",
                 "description": "",
+                "postedDate": parse_date(job.get("releasedDate")),
             })
 
         if (page + 1) * RESULTS_PER_PAGE >= data.get("totalFound", 0):

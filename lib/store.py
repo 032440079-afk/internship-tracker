@@ -57,7 +57,8 @@ def save_offer(offer: dict):
         "country": offer.get("country", ""),
         "source": offer.get("source", ""),
         "url": offer["url"],
-        "postedDate": offer.get("postedDate"),
+        "postedDate": offer.get("postedDate"),        # "YYYY-MM-DD" (kaynak veriyorsa)
+        "postedApprox": offer.get("postedApprox", False),  # True: "30+ gun once" gibi yaklasik
         "scrapedAt": now,
         "keywords": offer.get("matched_keywords", []),
         "eligible": offer.get("eligible", True),  # sinif / donem sarti (lib/eligibility.py)
@@ -69,29 +70,64 @@ def save_offer(offer: dict):
     return doc_id
 
 
-# ---------- basvuru takibi (lib/tracking.py) ----------
+# ---------- basvuru takibi (lib/tracking.py, web paneli) ----------
+# Her kisinin durumlari ayri: trackers/{email}/applications/{ilan_id}
+# Erisim listesi: allowed/{email} (ALLOWED_EMAILS secret'indan; ilk e-posta Kaan = owner)
+# Telegram sohbeti -> e-posta eslemesi: telegram_links/{chat_id} (/bagla komutuyla)
+# Uygunluk skorlari: matches/{ilan_id}
+# Firestore kurallari (firestore.rules) bu koleksiyonlari sadece izinli hesaplara acar.
 
-def update_status(doc_id: str, status: str) -> bool:
-    """Ilanin basvuru durumunu gunceller. Ilan yoksa False dondurur."""
+def sync_allowed(emails: list[str]):
+    """ALLOWED_EMAILS listesini allowed koleksiyonuna yazar; listede olmayanlari siler."""
     _init()
-    ref = _db.collection("offers").document(doc_id)
-    if not ref.get().exists:
-        return False
+    wanted = [e.strip().lower() for e in emails if e.strip()]
+    col = _db.collection("allowed")
+    for i, email in enumerate(wanted):
+        col.document(email).set({"owner": i == 0})
+    for doc in col.stream():
+        if doc.id not in wanted:
+            doc.reference.delete()
+
+
+def allowed_emails() -> list[str]:
+    _init()
+    return [d.id for d in _db.collection("allowed").stream()]
+
+
+def link_telegram(chat_id: str, email: str):
+    _init()
+    _db.collection("telegram_links").document(str(chat_id)).set({"email": email.lower()})
+
+
+def telegram_links() -> dict[str, str]:
+    """{chat_id: email}"""
+    _init()
+    return {d.id: d.to_dict().get("email", "") for d in _db.collection("telegram_links").stream()}
+
+
+def set_application_status(email: str, doc_id: str, status: str) -> dict | None:
+    """Kisinin ilan durumunu yazar; ilan yoksa None, varsa ilan bilgisini dondurur."""
+    _init()
+    offer = _db.collection("offers").document(doc_id).get()
+    if not offer.exists:
+        return None
+    data = offer.to_dict()
     now = datetime.now(timezone.utc)
-    ref.update({
+    _db.collection("trackers").document(email).collection("applications").document(doc_id).set({
         "status": status,
-        "statusUpdatedAt": now,
-        "statusHistory": firestore.ArrayUnion([{"status": status, "at": now}]),
-    })
-    return True
+        "updatedAt": now,
+        "title": data.get("title", ""),
+        "company": data.get("company", ""),
+        "history": firestore.ArrayUnion([{"status": status, "at": now}]),
+    }, merge=True)
+    return data
 
 
-def get_offer(doc_id: str) -> dict | None:
+def applications(email: str) -> list[dict]:
     _init()
-    doc = _db.collection("offers").document(doc_id).get()
-    return doc.to_dict() if doc.exists else None
+    return [d.to_dict() for d in _db.collection("trackers").document(email).collection("applications").stream()]
 
 
-def offers_with_status(statuses: list[str]) -> list[dict]:
+def save_match(doc_id: str, match: dict):
     _init()
-    return [d.to_dict() for d in _db.collection("offers").where("status", "in", statuses).stream()]
+    _db.collection("matches").document(doc_id).set(match)

@@ -11,6 +11,7 @@ Herkese acik API (bundesAPI/jobsuche-api):
 import requests
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs"  # v4 artik 403 donuyor
 SEARCH_TERMS = ["Industrial Engineering", "Wirtschaftsingenieur", "Supply Chain", "Logistik",
@@ -49,6 +50,8 @@ def scrape() -> list[dict]:
                         "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{refnr}",
                         # angebotsart=34 ile hepsi staj; baslikta "Praktikum" gecmese de staj filtresinden gecsin
                         "description": "Praktikum/Trainee",
+                        "postedDate": parse_date(job.get("aktuelleVeroeffentlichungsdatum")
+                                                 or job.get("modifikationsTimestamp")),
                     }
                 if len(jobs) < PAGE_SIZE:
                     break
