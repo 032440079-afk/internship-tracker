@@ -10,6 +10,7 @@ tarihler, iletisim bilgileri hic modele birakilmaz. Degistirilen metinde ana CV'
 kisaltma veya sayi varsa o degisiklik reddedilir ve orijinal metin kalir. Beceri satirlarinda sadece siralama
 degisebilir.
 """
+import difflib
 import json
 import os
 import re
@@ -27,18 +28,39 @@ from scrapers.company_nim_fallback import NIM_BASE_URL, NIM_MODEL, _parse_json
 MASTER_CV_PATH = os.environ.get("MASTER_CV_PATH", "/tmp/master_cv.docx")
 MAX_LENGTH_GROWTH = 1.3  # tek sayfaya sigsin diye: yeni metin orijinalin en fazla %30 uzun olabilir
 
-SYSTEM_PROMPT = """You tailor a student's CV and write a cover letter for a specific internship posting.
+SYSTEM_PROMPT = """You lightly tailor a student's CV and write a short cover letter for a specific internship posting.
 Rules — follow them strictly:
-- NEVER invent experience, employers, tools, technologies, certificates, numbers or results that are not in the CV.
-- You may only rephrase and reorder what the CV already says, emphasising what matters for this posting and using
-  the posting's wording where it truthfully describes the same thing.
-- Keep each rewritten text about the same length as the original (one-page CV).
+- NEVER invent experience, employers, tools, technologies, certificates, numbers or results that are not in the CV
+  or in the student's own note.
+- CV: the CV must still read as the student's own. Change ONLY the summary and at most the 4 bullets most relevant to
+  this posting. Keep their wording: swap or add a few words so the posting's terms appear where they truthfully fit,
+  do not rewrite whole sentences. Leave every other bullet out of the answer. Keep lengths about the same.
 - "skills": reorder the comma-separated items of each line so the most relevant come first. Do not add or remove items.
-- Cover letter: English, 3 short paragraphs (why this role/company, relevant evidence from the CV, closing), no
-  greeting and no signature (they are added separately), max ~230 words in total.
+- Cover letter: English, 3 short paragraphs, 150-200 words in total, no greeting and no signature (added separately).
+  Write like a real 2nd-year industrial engineering student: plain, specific, short sentences, not marketing language.
+  Paragraph 1: which role and one concrete reason it fits (a task from the posting). Paragraph 2: two concrete things
+  from the CV that match two tasks in the posting. Paragraph 3: availability for a full-time Erasmus+ internship and a
+  simple closing line.
+  Do NOT use: em dashes, "I am writing to express", "excited", "thrilled", "passion", "passionate", "leverage", "delve",
+  "dynamic", "fast-paced", "I am confident", "unique opportunity", "perfect fit", "align", "invaluable", "honed",
+  "spearhead", "testament", "cutting-edge", "furthermore", "moreover".
 Reply ONLY with JSON:
-{"summary": "...", "bullets": {"<id>": "..."}, "skills": {"<id>": "item, item, ..."}, "cover_letter": ["...", "...", "..."]}
-Only include bullet ids you actually changed."""
+{"summary": "...", "bullets": {"<id>": "..."}, "skills": {"<id>": "item, item, ..."}, "cover_letter": ["...", "...", "..."]}"""
+
+# Asiri yeniden yazimi engellemek icin: CV'de en fazla bu kadar madde degisebilir ve degisen metin orijinaline en az
+# bu oranda benzemeli (kelime bazinda). Boylece CV her ilanda Kaan'in kendi CV'si gibi okunur.
+MAX_BULLET_CHANGES = 4
+MIN_SIMILARITY = 0.6
+
+# Okuyana "yapay zeka yazmis" dedirten kalip ifadeler: bunlari iceren cumleler on yazidan cikarilir
+AI_CLICHES = (
+    "writing to express", "excited", "thrilled", "passion", "leverag", "delve", "dynamic", "fast-paced",
+    "i am confident", "i'm confident", "unique opportunity", "perfect fit", "align", "invaluable", "honed",
+    "spearhead", "testament", "cutting-edge", "furthermore", "moreover", "in today's", "wealth of",
+)
+
+# Ogrencinin kendi yazdigi kisa not (neden staj, neden Avrupa vb.); APPLICANT_NOTE secret'i ile verilir, istege bagli
+APPLICANT_NOTE = os.environ.get("APPLICANT_NOTE", "").strip()
 
 
 # ---------- ana CV'yi okuma ----------
@@ -98,8 +120,14 @@ def _suspicious_tokens(text: str, corpus_lower: str) -> list[str]:
     return bad
 
 
-def _accept(new: str, old: str, corpus_lower: str) -> bool:
+def _similarity(a: str, b: str) -> float:
+    return difflib.SequenceMatcher(None, a.lower().split(), b.lower().split()).ratio()
+
+
+def _accept(new: str, old: str, corpus_lower: str, min_similarity: float = MIN_SIMILARITY) -> bool:
     if not new or len(new) > len(old) * MAX_LENGTH_GROWTH + 20:
+        return False
+    if _similarity(new, old) < min_similarity:  # cumle bastan yazilmis: orijinal kalsin
         return False
     return not _suspicious_tokens(new, corpus_lower)
 
@@ -115,6 +143,8 @@ def _ask_model(parts: dict, offer: dict, job_text: str) -> dict:
     }
     user = (f"POSTING: {offer.get('title')} at {offer.get('company')} ({offer.get('location')})\n"
             f"POSTING TEXT:\n{job_text[:6000]}\n\nEDITABLE CV PARTS (JSON):\n{json.dumps(payload, ensure_ascii=False)}")
+    if APPLICANT_NOTE:
+        user += f"\n\nSTUDENT'S OWN NOTE (use its facts and tone in the cover letter; never contradict it):\n{APPLICANT_NOTE}"
     for attempt in range(2):
         response = client.chat.completions.create(
             model=NIM_MODEL,
@@ -141,14 +171,18 @@ def _build_cv(doc: Document, parts: dict, answer: dict, corpus_lower: str) -> in
     changed = 0
     if parts["summary"] and isinstance(answer.get("summary"), str):
         i, old = parts["summary"]
-        if _accept(answer["summary"].strip(), old, corpus_lower):
+        if _accept(answer["summary"].strip(), old, corpus_lower, min_similarity=0.5):
             _set_text(doc.paragraphs[i], answer["summary"].strip())
             changed += 1
+    bullets_changed = 0
     for pid, new in (answer.get("bullets") or {}).items():
+        if bullets_changed >= MAX_BULLET_CHANGES:
+            break
         old = parts["bullets"].get(str(pid))
-        if old and isinstance(new, str) and _accept(new.strip(), old, corpus_lower):
+        if old and isinstance(new, str) and new.strip() != old.strip() and _accept(new.strip(), old, corpus_lower):
             _set_text(doc.paragraphs[int(pid)], new.strip())
             changed += 1
+            bullets_changed += 1
     for pid, new in (answer.get("skills") or {}).items():
         old = parts["skills"].get(str(pid))
         if not old or not isinstance(new, str):
@@ -179,7 +213,7 @@ def _build_cover_letter(master: Document, paragraphs: list[str], offer: dict, pa
     r.font.size = Pt(14)
     doc.add_paragraph(contact)
     doc.add_paragraph(date.today().strftime("%d %B %Y"))
-    doc.add_paragraph(f"Re: {offer.get('title', 'Internship')} — {offer.get('company', '')}")
+    doc.add_paragraph(f"Application: {offer.get('title', 'Internship')}, {offer.get('company', '')}")
     doc.add_paragraph(f"Dear Hiring Team at {offer.get('company') or 'your company'},")
     for text in paragraphs:
         doc.add_paragraph(text.strip())
@@ -218,7 +252,7 @@ def build_application(offer: dict, job_text: str) -> dict:
     doc.save(cv_docx)
     result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes}
 
-    letter_corpus = f"{cv_text}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
+    letter_corpus = f"{cv_text}\n{APPLICANT_NOTE}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
     letter, removed = _clean_letter(answer.get("cover_letter") or [], letter_corpus)
     result["letter_sentences_removed"] = removed
     if len(letter) >= 2:
@@ -229,15 +263,15 @@ def build_application(offer: dict, job_text: str) -> dict:
 
 
 def _clean_letter(paragraphs: list, corpus_lower: str) -> tuple[list[str], int]:
-    """CV'de / ilanda gecmeyen ozel isim, kisaltma veya sayi iceren cumleleri cikarir.
-    (temizlenmis_paragraflar, cikarilan_cumle_sayisi) dondurur."""
+    """CV'de / ilanda gecmeyen ozel isim, kisaltma veya sayi iceren ve yapay zeka kalibi ifade iceren cumleleri
+    cikarir, uzun tireleri virgule cevirir. (temizlenmis_paragraflar, cikarilan_cumle_sayisi) dondurur."""
     cleaned, removed = [], 0
     for p in paragraphs:
         if not isinstance(p, str) or not p.strip():
             continue
         kept = []
-        for sentence in re.split(r"(?<=[.!?])\s+", p.strip()):
-            if _suspicious_tokens(sentence, corpus_lower):
+        for sentence in re.split(r"(?<=[.!?])\s+", re.sub(r"\s*[—–]\s*", ", ", p.strip())):
+            if _suspicious_tokens(sentence, corpus_lower) or any(c in sentence.lower() for c in AI_CLICHES):
                 removed += 1
             else:
                 kept.append(sentence)

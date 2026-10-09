@@ -50,6 +50,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           TELEGRAM_CV_CHAT_IDS: ${{ secrets.TELEGRAM_CV_CHAT_IDS }}
+          APPLICANT_NOTE: ${{ secrets.APPLICANT_NOTE }}   # istege bagli: on yazi icin Kaan'in kendi kisa notu
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
         run: python run.py
 
