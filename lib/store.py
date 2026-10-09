@@ -67,3 +67,31 @@ def save_offer(offer: dict):
     }
     _db.collection("offers").document(doc_id).set(data)
     return doc_id
+
+
+# ---------- basvuru takibi (lib/tracking.py) ----------
+
+def update_status(doc_id: str, status: str) -> bool:
+    """Ilanin basvuru durumunu gunceller. Ilan yoksa False dondurur."""
+    _init()
+    ref = _db.collection("offers").document(doc_id)
+    if not ref.get().exists:
+        return False
+    now = datetime.now(timezone.utc)
+    ref.update({
+        "status": status,
+        "statusUpdatedAt": now,
+        "statusHistory": firestore.ArrayUnion([{"status": status, "at": now}]),
+    })
+    return True
+
+
+def get_offer(doc_id: str) -> dict | None:
+    _init()
+    doc = _db.collection("offers").document(doc_id).get()
+    return doc.to_dict() if doc.exists else None
+
+
+def offers_with_status(statuses: list[str]) -> list[dict]:
+    _init()
+    return [d.to_dict() for d in _db.collection("offers").where("status", "in", statuses).stream()]

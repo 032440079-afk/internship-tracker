@@ -12,10 +12,11 @@ Her offer dict'i şu alanları içermeli:
   python run.py --source stageplaza  -> sadece belirtilen kaynağı çalıştırır
 """
 import argparse
+from datetime import datetime
 import importlib
 import traceback
 
-from lib import store, notify, export_html, ai_filter, application, config, eligibility
+from lib import store, notify, export_html, ai_filter, application, config, eligibility, tracking
 from lib.filters import is_relevant
 from lib.job_details import JobPageReader
 
@@ -76,6 +77,12 @@ def run(dry_run: bool = False, only_source: str | None = None):
     applications_made = 0
     reader = None
     make_applications = not dry_run and application.available()
+    if not dry_run:
+        # Saatlik takip isi gecikirse diye: bekleyen "Basvurdum / Gorusme ..." buton basmalarini burada da isle
+        try:
+            notify._run(tracking.process_updates())
+        except Exception as e:
+            print(f"[tracking] islenemedi: {type(e).__name__}")
     if not dry_run and not make_applications:
         print("[CV] Ana CV veya NVIDIA_API_KEY yok; CV/ön yazı üretimi kapalı.")
 
@@ -155,6 +162,12 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
     if ineligible:
         notify.send_ineligible_summary(ineligible)
+
+    if not dry_run and datetime.now().weekday() == 0:  # pazartesi: haftalik basvuru ozeti
+        try:
+            notify.send_text(tracking.format_stats(tracking.stats()))
+        except Exception as e:
+            print(f"[tracking] ozet gonderilemedi: {type(e).__name__}")
 
     if not dry_run:
         try:
