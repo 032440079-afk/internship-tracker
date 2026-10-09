@@ -44,8 +44,12 @@ Rules — follow them strictly:
   Do NOT use: em dashes, "I am writing to express", "excited", "thrilled", "passion", "passionate", "leverage", "delve",
   "dynamic", "fast-paced", "I am confident", "unique opportunity", "perfect fit", "align", "invaluable", "honed",
   "spearhead", "testament", "cutting-edge", "furthermore", "moreover".
+- "requirements": list the posting's 3-8 most important requirements (short, as the posting states them, e.g. "German
+  C1", "SAP experience", "studies in industrial engineering"). Set "met": true ONLY if the CV or the student's note
+  clearly shows it; otherwise false.
 Reply ONLY with JSON:
-{"summary": "...", "bullets": {"<id>": "..."}, "skills": {"<id>": "item, item, ..."}, "cover_letter": ["...", "...", "..."]}"""
+{"summary": "...", "bullets": {"<id>": "..."}, "skills": {"<id>": "item, item, ..."}, "cover_letter": ["...", "...", "..."],
+ "requirements": [{"req": "...", "met": true}]}"""
 
 # Asiri yeniden yazimi engellemek icin: CV'de en fazla bu kadar madde degisebilir ve degisen metin orijinaline en az
 # bu oranda benzemeli (kelime bazinda). Boylece CV her ilanda Kaan'in kendi CV'si gibi okunur.
@@ -250,7 +254,8 @@ def build_application(offer: dict, job_text: str) -> dict:
     changes = _build_cv(doc, parts, answer, cv_text.lower())
     cv_docx = os.path.join(outdir, f"Kaan_Dogru_CV_{company}.docx")
     doc.save(cv_docx)
-    result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes}
+    result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes,
+              "match": _match_score(answer.get("requirements"))}
 
     letter_corpus = f"{cv_text}\n{APPLICANT_NOTE}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
     letter, removed = _clean_letter(answer.get("cover_letter") or [], letter_corpus)
@@ -278,3 +283,14 @@ def _clean_letter(paragraphs: list, corpus_lower: str) -> tuple[list[str], int]:
         if kept:
             cleaned.append(" ".join(kept))
     return cleaned, removed
+
+
+def _match_score(requirements) -> dict | None:
+    """Ilanin temel sartlarindan kacini CV'nin karsiladigi. Kabul olasiligi DEGIL, uygunluk tahmini.
+    {"score": yuzde, "met": n, "total": n, "missing": [...]} veya (en az 3 sart yoksa) None."""
+    reqs = [r for r in (requirements or []) if isinstance(r, dict) and str(r.get("req") or "").strip()][:8]
+    if len(reqs) < 3:
+        return None
+    met = sum(1 for r in reqs if r.get("met") is True)
+    missing = [str(r["req"]).strip()[:40] for r in reqs if r.get("met") is not True][:4]
+    return {"score": round(100 * met / len(reqs)), "met": met, "total": len(reqs), "missing": missing}
