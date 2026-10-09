@@ -136,6 +136,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
         candidates = []
         seen_urls = set()
+        dates_filled = 0
         for offer in offers:
             for field in ("title", "company", "location"):
                 offer[field] = fix_mojibake(offer.get(field, ""))
@@ -147,9 +148,17 @@ def run(dry_run: bool = False, only_source: str | None = None):
             seen_urls.add(offer["url"])
             offer["matched_keywords"] = matches
             offer["source"] = source_key
-            if not dry_run and not store.is_new_offer(offer["url"]):
-                continue  # zaten kayıtlı, atla
+            if not dry_run:
+                existing = store.existing_offer(offer["url"])
+                if existing is not None:  # zaten kayıtlı, atla
+                    # Yayin tarihi ozelliginden once kaydedilmis ilanlara tarihi sonradan yaz (sitede gorunsun)
+                    if offer.get("postedDate") and not existing.get("postedDate"):
+                        store.fill_posted_date(offer["url"], offer["postedDate"], offer.get("postedApprox", False))
+                        dates_filled += 1
+                    continue
             candidates.append(offer)
+        if dates_filled:
+            print(f"{dates_filled} kayıtlı ilana yayın tarihi eklendi")
 
         # Anahtar kelime filtresinden geçen yeni ilanları yapay zekâyla ikinci kez ele
         for offer in ai_filter.filter_offers(candidates):

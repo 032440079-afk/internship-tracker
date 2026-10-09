@@ -34,12 +34,17 @@ def url_hash(url: str) -> str:
     return hashlib.sha256(url.strip().encode("utf-8")).hexdigest()[:24]
 
 
-def is_new_offer(url: str) -> bool:
-    """Bu ilan daha önce kaydedilmiş mi diye bakar. Yoksa True döner."""
+def existing_offer(url: str) -> dict | None:
+    """Ilan daha once kaydedildiyse kaydini, kaydedilmediyse None dondurur."""
     _init()
-    doc_id = url_hash(url)
-    doc = _db.collection("offers").document(doc_id).get()
-    return not doc.exists
+    doc = _db.collection("offers").document(url_hash(url)).get()
+    return doc.to_dict() if doc.exists else None
+
+
+def fill_posted_date(url: str, posted: str, approx: bool = False):
+    """Yayin tarihi ozelliginden once kaydedilmis ilana sonradan yayin tarihini yazar."""
+    _init()
+    _db.collection("offers").document(url_hash(url)).update({"postedDate": posted, "postedApprox": bool(approx)})
 
 
 def save_offer(offer: dict):
