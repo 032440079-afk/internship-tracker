@@ -3,9 +3,10 @@ permissions:
   contents: write
 on:
   schedule:
-    # GitHub zamanlanmis isleri gecikmeli baslatir; saat basi (:00) en yogun ve en cok geciken an. Bu yuzden
-    # erken bir saat ve rastgele bir dakika: UTC 02:17 = Turkiye saatiyle 05:17. Gecikse bile sabah biter.
-    - cron: "17 2 * * *"
+    # GitHub zamanlanmis isleri bu repoda her gun 4-7 saat gecikmeli baslatiyor (06:00 -> 11:48-13:40 UTC,
+    # 02:17 -> 06:35'ten sonra). Bu yuzden aksam saatine kuruldu: UTC 21:17 = Turkiye saatiyle 00:17.
+    # Gecikmezse gece calisir, her zamanki kadar gecikirse sabah 04:00-07:30 arasi biter.
+    - cron: "17 21 * * *"
   workflow_dispatch: {}   # Actions sekmesinden manuel de tetiklenebilir
 
 # Ayni anda iki calisma olmasin (ornegin zamanlanmis + elle baslatilan): ikincisi birincinin bitmesini bekler,
