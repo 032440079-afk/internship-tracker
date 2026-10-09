@@ -97,16 +97,23 @@ def _sections(doc: Document):
 
 
 def _editable_parts(doc: Document) -> dict:
+    """Bolum basliklari CV'ye gore degisebilir: "PROFESSIONAL SUMMARY" / "SUMMARY" / "PROFILE", "TECHNICAL SKILLS" /
+    "SKILLS", "CERTIFICATIONS" / "CERTIFICATIONS & TRAINING" (sertifika maddelerine dokunulmaz)."""
     parts = {"summary": None, "bullets": {}, "skills": {}}
     for section, i, p in _sections(doc):
-        if section == "PROFESSIONAL SUMMARY" and p.text.strip() and parts["summary"] is None:
+        if section in ("PROFESSIONAL SUMMARY", "SUMMARY", "PROFILE") and p.text.strip() and parts["summary"] is None:
             parts["summary"] = (i, p.text)
-        elif _is_bullet(p) and section != "CERTIFICATIONS" and len(p.runs) == 1:
+        elif _is_bullet(p) and "CERTIFICATION" not in section and len(p.runs) == 1:
             parts["bullets"][str(i)] = p.text
-        elif section == "TECHNICAL SKILLS" and len(p.runs) >= 2 and p.runs[0].text.strip().endswith(":") \
+        elif "SKILLS" in section and len(p.runs) >= 2 and p.runs[0].text.strip().endswith(":") \
                 and not p.runs[0].text.lower().startswith("language"):
             parts["skills"][str(i)] = p.runs[1].text.strip()
     return parts
+
+
+def _skill_items(line: str) -> list[str]:
+    """Virgulle ayrilmis beceriler; parantez icindeki virguller bolunmez ("MS Office (Excel, Word)" tek ogedir)."""
+    return [s.strip() for s in re.split(r",(?![^()]*\))", line) if s.strip()]
 
 
 def profiles() -> list[int]:
@@ -209,8 +216,8 @@ def _build_cv(doc: Document, parts: dict, answer: dict, corpus_lower: str) -> in
         old = parts["skills"].get(str(pid))
         if not old or not isinstance(new, str):
             continue
-        old_items = [s.strip() for s in old.split(",")]
-        new_items = [s.strip() for s in new.split(",")]
+        old_items = _skill_items(old)
+        new_items = _skill_items(new)
         if sorted(old_items) == sorted(new_items):  # sadece siralama degisebilir
             run = doc.paragraphs[int(pid)].runs[1]
             leading = run.text[:len(run.text) - len(run.text.lstrip())]
