@@ -82,7 +82,8 @@ def send_application_files(offer: dict, paths: list[str], match: dict | None = N
 
 def send_ineligible_summary(items: list[tuple[dict, str, str]]):
     """Sinif sarti yuzunden elenen ilanlari tek mesajda gonderir; yanlis eleme varsa kullanici gorebilsin."""
-    lines = ["🎓 <b>Sınıf şartı yüzünden elenen ilanlar</b> (yanlış eleme varsa bana yaz)\n"]
+    lines = ["🎓 <b>Sınıf şartı yüzünden elenen ilanlar</b>\n"
+             "Yanlış elendiyse: linke uzun bas → Kopyala → bota <code>/geri link</code> yaz.\n"]
     for offer, reason, evidence in items:
         line = (f"• <a href=\"{html.escape(offer['url'], quote=True)}\">{html.escape(offer.get('title', ''))}</a>"
                 f" — {html.escape(offer.get('company', ''))}\n   <i>“{html.escape(evidence[:160])}”</i>")

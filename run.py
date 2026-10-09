@@ -79,6 +79,17 @@ def run(dry_run: bool = False, only_source: str | None = None):
     if not dry_run and not make_applications:
         print("[CV] Ana CV veya NVIDIA_API_KEY yok; CV/ön yazı üretimi kapalı.")
 
+    # Telegram'dan "/geri <link>" ile geri alinan (yanlislikla sinif sartiyla elenmis) ilanlarin CV'leri
+    if make_applications and not only_source:
+        pending = store.offers_cv_pending()
+        if pending:
+            print(f"\n=== geri alinan ilanlar ({len(pending)}) ===")
+            with JobPageReader() as pending_reader:
+                for doc_id, offer in pending[:config.MAX_APPLICATIONS_PER_RUN]:
+                    _send_application(offer, _read_job_text(pending_reader, offer["url"]))
+                    store.clear_cv_pending(doc_id)
+                    applications_made += 1
+
     for module_name in SCRAPER_MODULES:
         source_key = module_name.split(".")[-1]
         if only_source and only_source != source_key:

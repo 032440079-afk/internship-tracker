@@ -17,8 +17,11 @@ Ogrenci: Turkiye'de 4 yillik (8 donemlik) endustri muhendisligi lisans programin
 2. sinifi bitirmis, 3. sinifa gecmis olacak. Mezuniyeti 2029 yazinda.
 eligible=false SADECE ilan acikca sunlardan birini istiyorsa: sadece master ogrencileri, tamamlanmis lisans derecesi /
 mezun, son sinif (final year, letztes Studienjahr), 4. sinif, en az 7. donem (ab dem 7. Semester veya ustu).
-eligible=true: 3. sinif, "ab dem 4./5./6. Semester", "fortgeschrittenes Studium", "Hauptstudium", "Bachelor oder
-Master" gibi lisans ogrencisine de acik sartlar; sart yazmayan ilanlar; emin olmadigin her durum.
+eligible=true: 3. sinif, "penultimate year" / "vorletztes Studienjahr" (sondan bir onceki yil = 3. sinif),
+"ab dem 4./5./6. Semester", "fortgeschrittenes Studium", "Hauptstudium", "Bachelor oder Master" gibi lisans ogrencisine
+de acik sartlar; sart yazmayan ilanlar; emin olmadigin her durum.
+Baslangic tarihi (Startdatum), staj suresi, dil, not ortalamasi, vize gibi seyler sinif sarti DEGILDIR; bunlar yuzunden
+asla eligible=false deme.
 eligible=false dersen "evidence" alanina bu sarti iceren cumleyi ilandan AYNEN kopyala (en fazla 30 kelime).
 SADECE su JSON ile cevap ver:
 {"eligible": true, "reason": "ilandaki sarti en fazla 8 kelimeyle ozetle", "evidence": "ilandan aynen alinti veya bos"}"""
@@ -32,6 +35,13 @@ def _evidence_in_text(evidence: str, job_text: str) -> bool:
     """Alintinin ilk 60 karakteri ilan metninde geciyor mu (bosluk ve buyuk/kucuk harf farki yok sayilir)."""
     ev = _norm(evidence).strip(' "\'.…')[:60]
     return len(ev) >= 15 and ev in _norm(job_text)
+
+
+# Eleme alintisi gercekten bir sinif / donem / derece sarti olmali (ornegin "Startdatum: 01.03.2027" degil)
+_CLASS_WORDS = re.compile(r"semester|year|jahr|master|bachelor|graduat|absolvent|abschluss|degree|studium|studies|"
+                          r"student|final|sinif|sınıf|année|annee|anno|niveau|bac\+", re.I)
+# "penultimate or final year" 3. sinifi da kapsar: Kaan 2027 yazinda 3. sinifa geciyor
+_PENULTIMATE = re.compile(r"penultimate|vorletzt|second[- ]to[- ]last|pre-?final", re.I)
 
 
 def check(offer: dict, job_text: str) -> tuple[bool, str, str]:
@@ -61,5 +71,8 @@ def check(offer: dict, job_text: str) -> tuple[bool, str, str]:
         return True, reason, ""
     if not _evidence_in_text(evidence, job_text):
         print(f"    [uygunluk] eleme gerekcesi ilanda bulunamadi, ilan tutuldu: {offer.get('title')}")
+        return True, reason, ""
+    if not _CLASS_WORDS.search(evidence) or _PENULTIMATE.search(evidence):
+        print(f"    [uygunluk] alinti bir sinif sarti degil / 3. sinifi kapsiyor, ilan tutuldu: {offer.get('title')}")
         return True, reason, ""
     return False, reason, evidence
