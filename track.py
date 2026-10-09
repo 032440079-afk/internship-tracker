@@ -7,4 +7,5 @@ import asyncio
 from lib import tracking
 
 if __name__ == "__main__":
+    tracking.sync_allowed()
     asyncio.run(tracking.process_updates())

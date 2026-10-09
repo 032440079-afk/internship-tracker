@@ -7,6 +7,7 @@ Greenhouse kimlik dogrulamasi gerektirmeyen genel bir Job Board API sunar:
 import requests
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 COMPANIES = [
     {"name": "AB InBev", "board": "abinbev"},
@@ -30,6 +31,7 @@ def _scrape_company(name: str, board: str, session: requests.Session):
             "country": "",
             "url": url,
             "description": "",
+            "postedDate": parse_date(job.get("first_published") or job.get("updated_at")),
         })
     return offers
 

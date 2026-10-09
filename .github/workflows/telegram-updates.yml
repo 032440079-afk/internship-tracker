@@ -28,4 +28,5 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_IDS: ${{ secrets.TELEGRAM_CHAT_IDS }}
           TELEGRAM_CV_CHAT_IDS: ${{ secrets.TELEGRAM_CV_CHAT_IDS }}
+          ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}
         run: python track.py

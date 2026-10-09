@@ -6,7 +6,8 @@ Herkese acik API:
 """
 import requests
 
-from lib.config import REQUEST_HEADERS, INTERNSHIP_KEYWORDS
+from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative, INTERNSHIP_KEYWORDS
 
 API_URL = "https://www.arbeitnow.com/api/job-board-api"
 MAX_PAGES = 15
@@ -42,6 +43,7 @@ def scrape() -> list[dict]:
                     "url": job["url"],
                     # Aciklama bos birakiliyor: uzun metinde "international" gibi kelimeler "intern" filtresini yaniltiyor.
                     "description": "",
+                    "postedDate": parse_date(job.get("created_at")),
                 }
     except Exception as e:
         print(f"[HATA] Arbeitnow scrape edilemedi: {e}")

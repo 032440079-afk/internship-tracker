@@ -8,6 +8,7 @@ Workday, kimlik dogrulamasi gerektirmeyen genel bir JSON API sunar:
 import requests
 
 from lib.config import REQUEST_HEADERS
+from lib.dates import parse_date, parse_relative
 
 COMPANIES = [
     {"name": "KION Group", "tenant": "kiongroup", "wd_host": "wd3", "site": "KIONGroup"},
@@ -72,6 +73,7 @@ def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: re
             if not title or not path:
                 continue
 
+            posted, approx = parse_relative(job.get("postedOn", ""))
             all_offers.append({
                 "title": title,
                 "company": name,
@@ -79,6 +81,8 @@ def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: re
                 "country": "",
                 "url": f"{base_url}{path}",
                 "description": "",
+                "postedDate": posted,
+                "postedApprox": approx,  # "30+ Days Ago": gercek tarih daha eski olabilir
             })
 
         offset += RESULTS_PER_PAGE
