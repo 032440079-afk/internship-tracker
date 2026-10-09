@@ -1,8 +1,11 @@
 """
 Her yeni ilan icin ana CV'den ilana uyarlanmis bir CV ve on yazi (cover letter) uretir, PDF'e cevirir.
 
+Iki kisi icin calisir (PROFILES): her kisinin kendi ana CV'si, kendi notu; dosyalar o kisinin Telegram sohbetine gider.
+
 Repo herkese acik oldugu icin:
-  - Ana CV repoda sifreli durur (cv/master_cv.docx.enc); workflow CV_KEY secret'i ile /tmp'ye acar.
+  - Ana CV'ler repoda sifreli durur (cv/master_cv.docx.enc = Kaan, cv/cv_2.docx.enc = 2. kisi); workflow CV_KEY
+    secret'i ile /tmp'ye acar.
   - CV icerigi ve uretilen metinler ASLA print edilmez (Actions loglari da herkese acik).
 
 Uydurma korumasi: model sadece ozet, madde (bullet) ve beceri satirlarini degistirebilir. Basliklar, isimler,
@@ -16,6 +19,7 @@ import os
 import re
 import subprocess
 import tempfile
+import unicodedata
 from datetime import date
 
 from docx import Document
@@ -25,7 +29,6 @@ from openai import OpenAI
 from lib.config import NVIDIA_API_KEY
 from scrapers.company_nim_fallback import NIM_BASE_URL, NIM_MODEL, _parse_json
 
-MASTER_CV_PATH = os.environ.get("MASTER_CV_PATH", "/tmp/master_cv.docx")
 MAX_LENGTH_GROWTH = 1.3  # tek sayfaya sigsin diye: yeni metin orijinalin en fazla %30 uzun olabilir
 
 SYSTEM_PROMPT = """You lightly tailor a student's CV and write a short cover letter for a specific internship posting.
@@ -63,8 +66,12 @@ AI_CLICHES = (
     "spearhead", "testament", "cutting-edge", "furthermore", "moreover", "in today's", "wealth of",
 )
 
-# Ogrencinin kendi yazdigi kisa not (neden staj, neden Avrupa vb.); APPLICANT_NOTE secret'i ile verilir, istege bagli
-APPLICANT_NOTE = os.environ.get("APPLICANT_NOTE", "").strip()
+# Basvuru profilleri, ALLOWED_EMAILS'taki sirayla ayni: 0 = Kaan, 1 = ikinci kisi. "note": ogrencinin kendi yazdigi kisa
+# not (neden staj, neden Avrupa vb.); APPLICANT_NOTE / APPLICANT_NOTE_2 secret'lari ile verilir, istege bagli.
+PROFILES = [
+    {"cv": os.environ.get("MASTER_CV_PATH", "/tmp/master_cv.docx"), "note": os.environ.get("APPLICANT_NOTE", "").strip()},
+    {"cv": os.environ.get("SECOND_CV_PATH", "/tmp/cv_2.docx"), "note": os.environ.get("APPLICANT_NOTE_2", "").strip()},
+]
 
 
 # ---------- ana CV'yi okuma ----------
@@ -102,8 +109,19 @@ def _editable_parts(doc: Document) -> dict:
     return parts
 
 
-def available() -> bool:
-    return bool(NVIDIA_API_KEY) and os.path.exists(MASTER_CV_PATH)
+def profiles() -> list[int]:
+    """Ana CV'si acilmis (CV uretilebilecek) profillerin sirasi."""
+    if not NVIDIA_API_KEY:
+        return []
+    return [i for i, p in enumerate(PROFILES) if os.path.exists(p["cv"])]
+
+
+def _name_and_contact(doc: Document) -> tuple[str, str]:
+    """CV'nin basindaki isim (ilk dolu paragraf) ve iletisim satiri (e-posta iceren ilk paragraf)."""
+    lines = [p.text.strip() for p in doc.paragraphs[:8] if p.text.strip()]
+    name = lines[0] if lines else ""
+    contact = next((t for t in lines[1:] if "@" in t), "")
+    return (name.title() if name.isupper() else name), contact
 
 
 # ---------- uydurma korumasi ----------
@@ -138,7 +156,7 @@ def _accept(new: str, old: str, corpus_lower: str, min_similarity: float = MIN_S
 
 # ---------- model ----------
 
-def _ask_model(parts: dict, offer: dict, job_text: str) -> dict:
+def _ask_model(parts: dict, offer: dict, job_text: str, note: str) -> dict:
     client = OpenAI(base_url=NIM_BASE_URL, api_key=NVIDIA_API_KEY)
     payload = {
         "summary": parts["summary"][1] if parts["summary"] else "",
@@ -147,8 +165,8 @@ def _ask_model(parts: dict, offer: dict, job_text: str) -> dict:
     }
     user = (f"POSTING: {offer.get('title')} at {offer.get('company')} ({offer.get('location')})\n"
             f"POSTING TEXT:\n{job_text[:6000]}\n\nEDITABLE CV PARTS (JSON):\n{json.dumps(payload, ensure_ascii=False)}")
-    if APPLICANT_NOTE:
-        user += f"\n\nSTUDENT'S OWN NOTE (use its facts and tone in the cover letter; never contradict it):\n{APPLICANT_NOTE}"
+    if note:
+        user += f"\n\nSTUDENT'S OWN NOTE (use its facts and tone in the cover letter; never contradict it):\n{note}"
     for attempt in range(2):
         response = client.chat.completions.create(
             model=NIM_MODEL,
@@ -202,8 +220,7 @@ def _build_cv(doc: Document, parts: dict, answer: dict, corpus_lower: str) -> in
 
 
 def _build_cover_letter(master: Document, paragraphs: list[str], offer: dict, path: str):
-    name = master.paragraphs[0].text.strip().title()
-    contact = master.paragraphs[2].text.strip()
+    name, contact = _name_and_contact(master)
     doc = Document()
     for s in doc.sections:
         s.left_margin = s.right_margin = Inches(1)
@@ -236,32 +253,36 @@ def _to_pdf(docx_path: str, outdir: str) -> str:
     return pdf
 
 
-def _slug(s: str) -> str:
-    return re.sub(r"[^A-Za-z0-9]+", "_", s or "").strip("_")[:40] or "Company"
+def _slug(s: str, default: str = "Company") -> str:
+    s = (s or "").translate(str.maketrans("ğĞşŞıİöÖüÜçÇ", "gGsSiIoOuUcC"))
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_")[:40] or default
 
 
-def build_application(offer: dict, job_text: str) -> dict:
-    """{"cv": pdf_yolu, "cover_letter": pdf_yolu (yoksa None), "changes": int} dondurur."""
-    master = Document(MASTER_CV_PATH)
+def build_application(offer: dict, job_text: str, profile: int = 0) -> dict:
+    """profile'in ana CV'sinden {"cv": pdf_yolu, "cover_letter": pdf_yolu (yoksa None), "changes": int, ...} dondurur."""
+    cv_path, note = PROFILES[profile]["cv"], PROFILES[profile]["note"]
+    master = Document(cv_path)
     parts = _editable_parts(master)
     cv_text = "\n".join(p.text for p in master.paragraphs)
-    answer = _ask_model(parts, offer, job_text)
+    answer = _ask_model(parts, offer, job_text, note)
 
     outdir = tempfile.mkdtemp(prefix="application_")
     company = _slug(offer.get("company"))
+    person = _slug(_name_and_contact(master)[0], default="Applicant")
 
-    doc = Document(MASTER_CV_PATH)
+    doc = Document(cv_path)
     changes = _build_cv(doc, parts, answer, cv_text.lower())
-    cv_docx = os.path.join(outdir, f"Kaan_Dogru_CV_{company}.docx")
+    cv_docx = os.path.join(outdir, f"{person}_CV_{company}.docx")
     doc.save(cv_docx)
     result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes,
               "match": _match_score(answer.get("requirements"))}
 
-    letter_corpus = f"{cv_text}\n{APPLICANT_NOTE}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
+    letter_corpus = f"{cv_text}\n{note}\n{offer.get('title', '')}\n{offer.get('company', '')}\n{job_text}".lower()
     letter, removed = _clean_letter(answer.get("cover_letter") or [], letter_corpus)
     result["letter_sentences_removed"] = removed
     if len(letter) >= 2:
-        cl_docx = os.path.join(outdir, f"Kaan_Dogru_Cover_Letter_{company}.docx")
+        cl_docx = os.path.join(outdir, f"{person}_Cover_Letter_{company}.docx")
         _build_cover_letter(master, letter, offer, cl_docx)
         result["cover_letter"] = _to_pdf(cl_docx, outdir)
     return result

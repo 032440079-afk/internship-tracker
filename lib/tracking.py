@@ -17,7 +17,6 @@ Telegram komutlari:
   /yardim                   -> kullanim
 """
 import html
-import os
 import re
 from datetime import datetime, timezone
 
@@ -35,8 +34,7 @@ STATUSES = {
 }
 APPLIED_STATUSES = ("applied", "interview", "rejected", "offer")  # hepsi "basvuru yapildi" sayilir
 
-# Siteye girebilecek hesaplar; ilk e-posta Kaan (uygunluk skorlari onun CV'sine gore)
-ALLOWED_EMAILS = [e.strip().lower() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()]
+ALLOWED_EMAILS = config.ALLOWED_EMAILS  # siteye girebilecek hesaplar; sira CV profilleriyle ayni (ilki Kaan)
 
 # Serbest metinde durum kelimeleri (Turkce karakterli / karaktersiz)
 _TEXT_STATUS = [

@@ -149,7 +149,7 @@ const ACTIONS = {  // sekmeye gore kart butonlari
 };
 const LABEL = {applied:'📨 Başvurdum', skip:'🙈 İlgilenmiyorum', interview:'🗣 Görüşme', rejected:'❌ Red', offer:'🎉 Kabul', reset:'↩ Yeni\'ye al'};
 const $ = id => document.getElementById(id);
-let db = null, user = null, isOwner = false, apps = {}, matches = {}, tab = 'new', shown = 60, lastVisit = '', undoFn = null;
+let db = null, user = null, profile = -1, apps = {}, matches = {}, tab = 'new', shown = 60, lastVisit = '', undoFn = null;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
@@ -168,8 +168,15 @@ function dateLine(o){
   return '📅 Yayın tarihi bilinmiyor · bulundu: ' + (o.scrapedAt ? rel(daysAgo(o.scrapedAt)) + ' (' + fmt(o.scrapedAt) + ')' : '-');
 }
 
+// Uygunluk skoru giris yapan kisinin kendi CV'sine gore: Kaan'inki (profil 0) dogrudan alanlarda, digerleri "p1" vb.
+function myMatch(id){
+  const d = matches[id]; if (!d || profile < 0) return null;
+  const m = profile === 0 ? d : d['p' + profile];
+  return m && typeof m.score === 'number' ? m : null;
+}
+
 function fitBadge(id){
-  const m = isOwner && matches[id]; if (!m) return '';
+  const m = myMatch(id); if (!m) return '';
   const cls = m.score >= 70 ? 'b-hi' : m.score >= 40 ? 'b-mid' : 'b-lo';
   return '<span class="badge ' + cls + '" title="' + m.met + '/' + m.total + ' temel şart CV\'nde var">%' + m.score + ' uygun</span>';
 }
@@ -177,7 +184,7 @@ function fitBadge(id){
 function card(o){
   const s = statusOf(o.id), a = apps[o.id];
   const isNew = lastVisit && o.scrapedAt > lastVisit && !s;
-  const m = isOwner && matches[o.id];
+  const m = myMatch(o.id);
   let state = '';
   if (s && a) {
     const t = a.updatedAt && a.updatedAt.toDate ? a.updatedAt.toDate() : null;
@@ -199,7 +206,7 @@ function filtered(){
   let list = DATA.filter(o => (!user || t.has(statusOf(o.id)))
     && (!company || o.company === company)
     && (!q || (o.title + ' ' + o.company + ' ' + o.location).toLowerCase().includes(q)));
-  const fit = o => (matches[o.id] || {score: -1}).score;
+  const fit = o => (myMatch(o.id) || {score: -1}).score;
   const day = o => sort === 'found' ? o.scrapedAt : (o.postedDate || o.scrapedAt.slice(0, 10));
   if (sort === 'fit') list.sort((a, b) => fit(b) - fit(a) || (day(a) < day(b) ? 1 : -1));
   else if (user && tab !== 'new' && sort === 'posted') list.sort((a, b) => ((apps[b.id] || {}).updatedAt?.seconds || 0) - ((apps[a.id] || {}).updatedAt?.seconds || 0));
@@ -269,7 +276,7 @@ $('more').addEventListener('click', () => { shown += 60; render(); });
 function banner(html){ $('banner').innerHTML = html; $('banner').hidden = !html; }
 
 async function onUser(u){
-  user = u; apps = {}; matches = {}; isOwner = false;
+  user = u; apps = {}; matches = {}; profile = -1;
   const key = 'lastVisit:' + (u ? u.email : 'anon');
   lastVisit = store.get(key) || ''; store.set(key, new Date().toISOString());
   if (!u) {
@@ -283,14 +290,18 @@ async function onUser(u){
   const email = u.email.toLowerCase();
   try {
     const me = await db.collection('allowed').doc(email).get();
-    isOwner = !!(me.exists && me.data().owner);
+    const d = me.exists ? me.data() : {};
+    profile = typeof d.profile === 'number' ? d.profile : d.owner ? 0 : -1;
   } catch (e) {
     banner('Bu Google hesabının panoya erişim izni yok (' + esc(u.email) + '). İzinli hesapla giriş yap.');
     user = null; render(); return;
   }
   banner('');
-  if (isOwner) {
-    try { (await db.collection('matches').get()).forEach(d => matches[d.id] = d.data()); $('sortFit').hidden = false; } catch (e) {}
+  if (profile >= 0) {
+    try {
+      (await db.collection('matches').get()).forEach(d => matches[d.id] = d.data());
+      $('sortFit').hidden = !Object.keys(matches).some(myMatch);
+    } catch (e) {}
   }
   db.collection('trackers').doc(email).collection('applications').onSnapshot(snap => {
     apps = {}; snap.forEach(d => apps[d.id] = d.data()); render();

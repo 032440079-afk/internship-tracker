@@ -19,6 +19,9 @@ TELEGRAM_CHAT_IDS = [
 TELEGRAM_CV_CHAT_IDS = [
     c.strip() for c in os.environ.get("TELEGRAM_CV_CHAT_IDS", "").split(",") if c.strip()
 ] or TELEGRAM_CHAT_IDS
+# Siteye girebilecek Google hesaplari (virgulle). Sira onemli: 1. = Kaan (cv/master_cv.docx.enc),
+# 2. = ikinci kisi (cv/cv_2.docx.enc); CV'ler /bagla ile bu e-postalara baglanan Telegram sohbetlerine gider.
+ALLOWED_EMAILS = [e.strip().lower() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()]
 # Bir calismada en fazla kac ilan icin CV + on yazi uretilecegi (calisma suresini sinirlamak icin)
 MAX_APPLICATIONS_PER_RUN = int(os.environ.get("MAX_APPLICATIONS_PER_RUN", "80"))
 

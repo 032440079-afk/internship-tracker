@@ -78,18 +78,30 @@ python run.py --dry-run
 ## Web paneli: Google ile giriş ve başvuru takibi
 
 Site (Firebase Hosting) herkese açıktır ve sadece ilan listesini gösterir. Google ile giriş yapan **izinli** hesaplar
-ek olarak kendi başvuru durumlarını (Başvurdum / Görüşme / Red / Kabul / Gizle), istatistiklerini ve (ilk hesap için)
-CV uygunluk yüzdelerini görür. Her hesabın durumları ayrıdır. Erişim `firestore.rules` ile korunur.
+ek olarak kendi başvuru durumlarını (Başvurdum / Görüşme / Red / Kabul / Gizle), istatistiklerini ve kendi CV'sine
+göre uygunluk yüzdelerini görür. Her hesabın durumları ayrıdır. Erişim `firestore.rules` ile korunur.
 
 Bir kerelik kurulum:
 1. Firebase Console → ⚙️ Project settings → General → **Your apps** → `</>` (Web) → bir isim ver → **Register app**
    (Firebase Hosting kutusunu işaretlemeye gerek yok). Site giriş ayarlarını buradan otomatik alır.
 2. Firebase Console → **Authentication** → Get started → Sign-in method → **Google** → Enable → destek e-postası seç → Save.
 3. GitHub → repo → Settings → Secrets and variables → Actions → **New repository secret**:
-   `ALLOWED_EMAILS` = siteye girecek Gmail adresleri, virgülle (ilk adres Kaan'ın olmalı; uygunluk yüzdeleri onun CV'sine göre).
+   `ALLOWED_EMAILS` = siteye girecek Gmail adresleri, virgülle. Sıra önemli: ilk adres Kaan'ın (`cv/master_cv.docx.enc`),
+   ikincisi 2. kişinin (`cv/cv_2.docx.enc`).
 4. Firebase Console → **Firestore Database** → **Rules** sekmesi → oradaki metnin tamamını sil, repodaki
    `firestore.rules` dosyasının içeriğini yapıştır → **Publish**. (GitHub Actions'taki servis hesabının kural
    yükleme yetkisi olmadığı için bu adım elle yapılıyor; kurallar değişirse tekrar yapıştırılır.)
 5. Bir sonraki günlük çalıştırmadan sonra siteye girip **Google ile giriş** yap.
 6. Telegram'da her kişi kendi sohbetinden bota bir kez `/bagla adres@gmail.com` yazar; ilan bildirimlerindeki butonlar
    o kişinin listesine yazar. `/ozet` istatistikleri gösterir.
+
+## İkinci kişinin CV'si ve ön yazısı
+
+Her yeni ilan için iki kişiye de kendi ana CV'sinden uyarlanmış CV + ön yazı üretilir ve **sadece o kişinin** Telegram
+sohbetine gönderilir (`/bagla` ile kendi e-postasına bağladığı sohbet).
+1. 2. kişinin İngilizce ana CV'si (Word .docx) `CV_KEY` ile şifrelenip repoya `cv/cv_2.docx.enc` olarak eklenir
+   (şifresiz CV asla commit edilmez; repo herkese açık):
+   `openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in cv.docx -out cv/cv_2.docx.enc -pass env:CV_KEY`
+2. `ALLOWED_EMAILS` içinde onun Gmail adresi **ikinci** sırada olmalı.
+3. 2. kişi kendi Telegram sohbetinden bota `/bagla onun@gmail.com` yazar. Bağlanana kadar onun CV'leri üretilmez.
+4. İsteğe bağlı: `APPLICANT_NOTE_2` secret'ı = onun kendi kısa notu (ön yazıda kullanılır).
