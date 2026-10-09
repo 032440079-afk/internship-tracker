@@ -6,8 +6,8 @@ Herkese acik API:
 """
 import requests
 
-from lib.config import REQUEST_HEADERS
-from lib.dates import parse_date, parse_relative, INTERNSHIP_KEYWORDS
+from lib.config import REQUEST_HEADERS, INTERNSHIP_KEYWORDS
+from lib.dates import parse_date
 
 API_URL = "https://www.arbeitnow.com/api/job-board-api"
 MAX_PAGES = 15
