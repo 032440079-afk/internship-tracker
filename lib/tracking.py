@@ -52,6 +52,7 @@ HELP = ("ℹ️ <b>Başvuru takibi</b>\n"
         "• Her ilan bildiriminin altındaki butonlara bas (en geç ~1 saat içinde kaydedilir, buton ✅ olur).\n"
         "• Butonu olmayan eski ilanlar için: ilan linkini yapıştırıp yanına <i>başvurdum / görüşme / red / kabul</i> yaz.\n"
         "• /ozet → başvuru istatistiklerin\n"
+        "• Sınıf şartıyla yanlışlıkla elenen bir ilan için: <code>/geri ilan-linki</code>\n"
         "• Aynı durumları web sitesinde de görüp değiştirebilirsin.")
 
 
@@ -159,6 +160,18 @@ async def _handle_message(bot: Bot, msg, links: dict) -> bool:
             reply = f"✅ Bu sohbet <b>{html.escape(given)}</b> hesabına bağlandı. Butonlar artık senin listene yazacak."
         else:
             reply = "⚠️ Bu e-posta izinli hesaplar arasında yok. Siteye girdiğin Google hesabını yaz: /bagla adres@gmail.com"
+    elif command.startswith("geri"):
+        url, _ = _parse_text_status(text)
+        offer = store.restore_offer(store.url_hash(url)) if url else None
+        if offer is not None:
+            doc_id = store.url_hash(url)
+            await bot.send_message(
+                chat_id=msg.chat.id, parse_mode=ParseMode.HTML, disable_web_page_preview=True,
+                text=(f"↩️ Geri alındı: <b>{html.escape(offer.get('title', ''))}</b> — {html.escape(offer.get('company', ''))}\n"
+                      "Panoda görünecek; CV ve ön yazısı bir sonraki günlük çalıştırmada gelecek."),
+                reply_markup=keyboard(doc_id))
+            return True
+        reply = "⚠️ Link bulunamadı. Elenenler mesajındaki ilan linkini kopyalayıp <code>/geri link</code> yaz."
     elif command.startswith(("ozet", "özet")):
         reply = format_stats(stats(email)) if email else NOT_LINKED
     elif command.startswith(("yardim", "yardım", "start", "help")):

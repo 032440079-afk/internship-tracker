@@ -131,3 +131,24 @@ def applications(email: str) -> list[dict]:
 def save_match(doc_id: str, match: dict):
     _init()
     _db.collection("matches").document(doc_id).set(match)
+
+
+def restore_offer(doc_id: str) -> dict | None:
+    """Yanlislikla sinif sartiyla elenmis ilani geri alir: panoda gorunur ve bir sonraki calismada CV'si uretilir."""
+    _init()
+    ref = _db.collection("offers").document(doc_id)
+    doc = ref.get()
+    if not doc.exists:
+        return None
+    ref.update({"eligible": True, "cvPending": True})
+    return doc.to_dict()
+
+
+def offers_cv_pending() -> list[tuple[str, dict]]:
+    _init()
+    return [(d.id, d.to_dict()) for d in _db.collection("offers").where("cvPending", "==", True).stream()]
+
+
+def clear_cv_pending(doc_id: str):
+    _init()
+    _db.collection("offers").document(doc_id).update({"cvPending": False})
