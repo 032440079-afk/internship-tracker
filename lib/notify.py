@@ -64,8 +64,13 @@ def notify_new_offer(offer: dict):
     _run(_send_all(text))
 
 
-def send_application_files(offer: dict, paths: list[str]):
-    caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"[:1000]
+def send_application_files(offer: dict, paths: list[str], match: dict | None = None):
+    caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"
+    if match:
+        caption += f"\n📊 Uygunluk: %{match['score']} ({match['met']}/{match['total']} temel şart CV'nde var)"
+        if match["missing"]:
+            caption += "\nEksik görünen: " + ", ".join(match["missing"])
+    caption = caption[:1000]
     _run(_send_documents(paths, caption))
 
 

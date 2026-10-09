@@ -60,8 +60,9 @@ def _send_application(offer: dict, job_text: str):
     try:
         files = application.build_application(offer, job_text)
         paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
-        notify.send_application_files(offer, paths)
-        print(f"    [CV] {files['changes']} bölüm uyarlandı, ön yazı: {'var' if files['cover_letter'] else 'yok'}"
+        notify.send_application_files(offer, paths, files["match"])
+        score = f"%{files['match']['score']}" if files["match"] else "-"
+        print(f"    [CV] {files['changes']} bölüm uyarlandı, uygunluk: {score}, ön yazı: {'var' if files['cover_letter'] else 'yok'}"
               f" (çıkarılan cümle: {files['letter_sentences_removed']}, ilan metni: {len(job_text)} karakter)")
     except Exception as e:
         print(f"    [CV-HATA] {type(e).__name__}")
