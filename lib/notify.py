@@ -3,6 +3,7 @@ Yeni ilan bulunduğunda Telegram üzerinden bildirim gönderir.
 Birden fazla chat_id'ye (sen + kız arkadaşın) aynı anda mesaj atar.
 """
 import asyncio
+import html
 from concurrent.futures import ThreadPoolExecutor
 from telegram import Bot
 from telegram.constants import ParseMode
@@ -66,3 +67,16 @@ def notify_new_offer(offer: dict):
 def send_application_files(offer: dict, paths: list[str]):
     caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"[:1000]
     _run(_send_documents(paths, caption))
+
+
+def send_ineligible_summary(items: list[tuple[dict, str, str]]):
+    """Sinif sarti yuzunden elenen ilanlari tek mesajda gonderir; yanlis eleme varsa kullanici gorebilsin."""
+    lines = ["🎓 <b>Sınıf şartı yüzünden elenen ilanlar</b> (yanlış eleme varsa bana yaz)\n"]
+    for offer, reason, evidence in items:
+        line = (f"• <a href=\"{html.escape(offer['url'], quote=True)}\">{html.escape(offer.get('title', ''))}</a>"
+                f" — {html.escape(offer.get('company', ''))}\n   <i>“{html.escape(evidence[:160])}”</i>")
+        if sum(len(l) for l in lines) + len(line) > 3800:  # Telegram mesaj siniri 4096
+            lines.append(f"… ve {len(items) - (len(lines) - 1)} ilan daha")
+            break
+        lines.append(line)
+    _run(_send_all("\n".join(lines)))

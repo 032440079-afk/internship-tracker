@@ -70,7 +70,7 @@ def _send_application(offer: dict, job_text: str):
 def run(dry_run: bool = False, only_source: str | None = None):
     total_found = 0
     total_new = 0
-    total_ineligible = 0
+    ineligible = []
     notified_titles = set()
     applications_made = 0
     reader = None
@@ -131,10 +131,10 @@ def run(dry_run: bool = False, only_source: str | None = None):
                 if reader is None:
                     reader = JobPageReader().__enter__()
                 job_text = _read_job_text(reader, offer["url"])
-            offer["eligible"], reason = eligibility.check(offer, job_text)
+            offer["eligible"], reason, evidence = eligibility.check(offer, job_text)
             store.save_offer(offer)  # uygun olmasa da kaydedilir ki her gun yeniden kontrol edilmesin
             if not offer["eligible"]:
-                total_ineligible += 1
+                ineligible.append((offer, reason, evidence))
                 print(f"  [SINIF-ŞARTI] {offer['title']} — {offer.get('company')} — {reason}")
                 continue
             total_new += 1
@@ -149,8 +149,11 @@ def run(dry_run: bool = False, only_source: str | None = None):
             reader.__exit__(None, None, None)
             reader = None
 
-    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | Sınıf şartıyla elenen: {total_ineligible}"
+    print(f"\nToplam bulunan: {total_found} | Alakalı + yeni: {total_new} | Sınıf şartıyla elenen: {len(ineligible)}"
           f" | CV üretilen: {applications_made}")
+
+    if ineligible:
+        notify.send_ineligible_summary(ineligible)
 
     if not dry_run:
         try:
