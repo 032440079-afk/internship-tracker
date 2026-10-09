@@ -87,6 +87,9 @@ Bir kerelik kurulum:
 2. Firebase Console → **Authentication** → Get started → Sign-in method → **Google** → Enable → destek e-postası seç → Save.
 3. GitHub → repo → Settings → Secrets and variables → Actions → **New repository secret**:
    `ALLOWED_EMAILS` = siteye girecek Gmail adresleri, virgülle (ilk adres Kaan'ın olmalı; uygunluk yüzdeleri onun CV'sine göre).
-4. Bir sonraki günlük çalıştırmadan sonra siteye girip **Google ile giriş** yap.
-5. Telegram'da her kişi kendi sohbetinden bota bir kez `/bagla adres@gmail.com` yazar; ilan bildirimlerindeki butonlar
+4. Firebase Console → **Firestore Database** → **Rules** sekmesi → oradaki metnin tamamını sil, repodaki
+   `firestore.rules` dosyasının içeriğini yapıştır → **Publish**. (GitHub Actions'taki servis hesabının kural
+   yükleme yetkisi olmadığı için bu adım elle yapılıyor; kurallar değişirse tekrar yapıştırılır.)
+5. Bir sonraki günlük çalıştırmadan sonra siteye girip **Google ile giriş** yap.
+6. Telegram'da her kişi kendi sohbetinden bota bir kez `/bagla adres@gmail.com` yazar; ilan bildirimlerindeki butonlar
    o kişinin listesine yazar. `/ozet` istatistikleri gösterir.

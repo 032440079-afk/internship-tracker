@@ -11,13 +11,26 @@ Herkese acik API (bundesAPI/jobsuche-api):
 import requests
 
 from lib.config import REQUEST_HEADERS
-from lib.dates import parse_date, parse_relative
+from lib.dates import parse_date
 
 API_URL = "https://rest.arbeitsagentur.de/jobboerse/jobsuche-service/pc/v6/jobs"  # v4 artik 403 donuyor
 SEARCH_TERMS = ["Industrial Engineering", "Wirtschaftsingenieur", "Supply Chain", "Logistik",
                 "Produktion", "Operations", "Lean", "Prozessoptimierung"]
 PAGE_SIZE = 100
 MAX_PAGES = 5
+
+
+def _posted_date(job: dict) -> str | None:
+    """API v6 alan adlari v4'ten farkli; yayin tarihini adinda 'veroeffentlich' / 'datum' / 'date' gecen alandan al."""
+    keys = sorted(job, key=lambda k: (0 if "veroeffentlich" in k.lower() else 1 if "datum" in k.lower() else 2))
+    for key in keys:
+        low = key.lower()
+        if ("veroeffentlich" in low or "datum" in low or "date" in low or "timestamp" in low) \
+                and "eintritt" not in low and isinstance(job[key], (str, int, float)):
+            parsed = parse_date(job[key])
+            if parsed:
+                return parsed
+    return None
 
 
 def scrape() -> list[dict]:
@@ -36,6 +49,8 @@ def scrape() -> list[dict]:
                 jobs = resp.json().get("ergebnisliste", [])
                 if not jobs:
                     break
+                if not offers:
+                    print(f"[arbeitsagentur] ilan alanlari: {sorted(jobs[0].keys())}")
                 for job in jobs:
                     refnr = job.get("referenznummer", "")
                     title = job.get("stellenangebotsTitel") or job.get("hauptberuf", "")
@@ -50,8 +65,7 @@ def scrape() -> list[dict]:
                         "url": f"https://www.arbeitsagentur.de/jobsuche/jobdetail/{refnr}",
                         # angebotsart=34 ile hepsi staj; baslikta "Praktikum" gecmese de staj filtresinden gecsin
                         "description": "Praktikum/Trainee",
-                        "postedDate": parse_date(job.get("aktuelleVeroeffentlichungsdatum")
-                                                 or job.get("modifikationsTimestamp")),
+                        "postedDate": _posted_date(job),
                     }
                 if len(jobs) < PAGE_SIZE:
                     break
