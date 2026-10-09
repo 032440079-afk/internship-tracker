@@ -22,7 +22,7 @@ def _format_message(offer: dict) -> str:
     )
 
 
-async def _send_all(text: str):
+async def _send_all(text: str, reply_markup=None):
     if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_IDS:
         print("[notify] TELEGRAM_BOT_TOKEN veya TELEGRAM_CHAT_IDS ayarlanmamış, bildirim atlanıyor.")
         return
@@ -34,6 +34,7 @@ async def _send_all(text: str):
                 text=text,
                 parse_mode=ParseMode.HTML,
                 disable_web_page_preview=False,
+                reply_markup=reply_markup,
             )
         except Exception as e:
             print(f"[notify] chat_id={chat_id} için mesaj gönderilemedi: {e}")
@@ -60,7 +61,12 @@ def _run(coro):
 
 
 def notify_new_offer(offer: dict):
+    from lib import store, tracking  # basvuru takibi butonlari (Basvurdum / Gorusme / Red / Kabul)
     text = _format_message(offer)
+    _run(_send_all(text, reply_markup=tracking.keyboard(store.url_hash(offer["url"]))))
+
+
+def send_text(text: str):
     _run(_send_all(text))
 
 
