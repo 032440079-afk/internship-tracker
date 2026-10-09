@@ -17,7 +17,7 @@ import importlib
 import traceback
 
 from lib import store, notify, export_html, ai_filter, application, config, eligibility, tracking
-from lib.filters import is_relevant
+from lib.filters import is_relevant, fix_mojibake
 from lib.job_details import JobPageReader
 
 # Aktif scraper modülleri. Her biri scrapers/ altında, scrape() fonksiyonu içerir.
@@ -36,16 +36,6 @@ SCRAPER_MODULES = [
     # "scrapers.company_zf",
     # "scrapers.company_festo",
 ]
-
-
-def _fix_mojibake(text: str) -> str:
-    """Kaynakta yanlis kodlanmis metni duzeltir ("stationÃ¤re" -> "stationäre")."""
-    if "Ã" not in (text or ""):
-        return text
-    try:
-        return text.encode("latin-1").decode("utf-8")
-    except (UnicodeEncodeError, UnicodeDecodeError):
-        return text
 
 
 def _read_job_text(reader: JobPageReader, url: str) -> str:
@@ -111,7 +101,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
         seen_urls = set()
         for offer in offers:
             for field in ("title", "company", "location"):
-                offer[field] = _fix_mojibake(offer.get(field, ""))
+                offer[field] = fix_mojibake(offer.get(field, ""))
             relevant, matches = is_relevant(
                 offer.get("title", ""), offer.get("description", ""), offer.get("location", "")
             )

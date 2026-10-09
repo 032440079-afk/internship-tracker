@@ -10,7 +10,7 @@ import json
 import os
 from datetime import datetime, timezone
 from lib import store
-from lib.filters import is_europe_location, is_non_internship_role
+from lib.filters import is_europe_location, is_non_internship_role, has_excluded_keyword, fix_mojibake
 OUTPUT_PATH = "docs/index.html"
 
 
@@ -21,13 +21,14 @@ def _fetch_all_offers() -> list[dict]:
     for doc in docs:
         d = doc.to_dict()
         scraped = d.get("scrapedAt")
+        # Sonradan eklenen filtreleri (Avrupa disi, alan disi, Werkstudent...) eski kayitlara da uygula
         if not is_europe_location(d.get("location", "")) or is_non_internship_role(d.get("title", "")) \
-                or d.get("eligible") is False:
+                or has_excluded_keyword(d.get("title", "")) or d.get("eligible") is False:
             continue
         offers.append({
             "id": doc.id,
-            "title": d.get("title", ""), "company": d.get("company", ""),
-            "location": d.get("location", ""), "source": d.get("source", ""),
+            "title": fix_mojibake(d.get("title", "")), "company": fix_mojibake(d.get("company", "")),
+            "location": fix_mojibake(d.get("location", "")), "source": d.get("source", ""),
             "url": d.get("url", ""), "scrapedAt": scraped.isoformat() if scraped else "",
             "postedDate": d.get("postedDate") or "", "postedApprox": bool(d.get("postedApprox")),
         })

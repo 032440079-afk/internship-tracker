@@ -73,7 +73,7 @@ EXCLUDE_KEYWORDS = [
     "treasury operations", "fund operations", "sales operations", "store operations", "cabin operations",
     "finance operations", "financial markets", "platform operations",
     # Basliginda "operations" gecen ama alan disi olan ilanlar (Amazon HR / IT / veri merkezi stajlari)
-    "human resources", "it support", "data center", "marketing", "pharmaziepraktikum",
+    "human resources", "it support", "data center", "pharmaziepraktikum",
 ]
 
 # Sadece staj/ogrenci pozisyonlarini kabul etmek icin gerekli anahtar kelimeler
@@ -103,7 +103,15 @@ NON_EUROPE_KEYWORDS = [
     "osaka", "sydney", "melbourne", "auckland", "manila", "jakarta",
     "bangkok", "ho chi minh", "hanoi", "mumbai", "bangalore", "delhi",
     "sao paulo", "rio de janeiro", "mexico city", "hyderabad", "pune",
+    "johannesburg", "cape town", "pretoria", "durban", "cairo", "casablanca", "tunis", "lagos", "nairobi",
 ]
+
+# Amazon gibi kaynaklar konumu "Sehir, Bolge, ZAF" gibi 3 harfli ulke koduyla yaziyor
+NON_EUROPE_ISO3 = {
+    "ZAF", "EGY", "MAR", "TUN", "NGA", "KEN", "IND", "PAK", "BGD", "LKA", "CHN", "HKG", "TWN", "JPN", "KOR", "SGP",
+    "MYS", "IDN", "THA", "PHL", "VNM", "AUS", "NZL", "USA", "CAN", "MEX", "BRA", "ARG", "CHL", "COL", "PER", "CRI",
+    "ARE", "SAU", "QAT", "KWT", "BHR", "ISR", "JOR",
+}
 
 REQUEST_HEADERS = {
     "User-Agent": (
