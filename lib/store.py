@@ -72,9 +72,9 @@ def save_offer(offer: dict):
 
 # ---------- basvuru takibi (lib/tracking.py, web paneli) ----------
 # Her kisinin durumlari ayri: trackers/{email}/applications/{ilan_id}
-# Erisim listesi: allowed/{email} (ALLOWED_EMAILS secret'indan; ilk e-posta Kaan = owner)
+# Erisim listesi: allowed/{email} (ALLOWED_EMAILS secret'indan; ilk e-posta Kaan = owner, profile = listedeki sira)
 # Telegram sohbeti -> e-posta eslemesi: telegram_links/{chat_id} (/bagla komutuyla)
-# Uygunluk skorlari: matches/{ilan_id}
+# Uygunluk skorlari: matches/{ilan_id}; Kaan'inki dogrudan alanlarda, 2. kisininki "p1" alaninda
 # Firestore kurallari (firestore.rules) bu koleksiyonlari sadece izinli hesaplara acar.
 
 def sync_allowed(emails: list[str]):
@@ -83,7 +83,7 @@ def sync_allowed(emails: list[str]):
     wanted = [e.strip().lower() for e in emails if e.strip()]
     col = _db.collection("allowed")
     for i, email in enumerate(wanted):
-        col.document(email).set({"owner": i == 0})
+        col.document(email).set({"owner": i == 0, "profile": i})
     for doc in col.stream():
         if doc.id not in wanted:
             doc.reference.delete()
@@ -128,9 +128,9 @@ def applications(email: str) -> list[dict]:
     return [d.to_dict() for d in _db.collection("trackers").document(email).collection("applications").stream()]
 
 
-def save_match(doc_id: str, match: dict):
+def save_match(doc_id: str, match: dict, profile: int = 0):
     _init()
-    _db.collection("matches").document(doc_id).set(match)
+    _db.collection("matches").document(doc_id).set(match if profile == 0 else {f"p{profile}": match}, merge=True)
 
 
 def restore_offer(doc_id: str) -> dict | None:

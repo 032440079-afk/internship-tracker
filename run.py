@@ -46,19 +46,44 @@ def _read_job_text(reader: JobPageReader, url: str) -> str:
         return ""
 
 
-def _send_application(offer: dict, job_text: str):
-    """Ilana gore CV + on yazi uretip Telegram'a gonderir. Icerik loglanmaz (Actions loglari herkese acik)."""
+def _cv_targets() -> list[tuple[int, list[str]]]:
+    """[(profil, sohbetler)]: her kisinin CV'si /bagla ile kendi e-postasina baglanan Telegram sohbetlerine gider.
+    Kaan'in (profil 0) bagli sohbeti yoksa eskisi gibi TELEGRAM_CV_CHAT_IDS'e (baska birine baglananlar haric)."""
     try:
-        files = application.build_application(offer, job_text)
-        paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
-        notify.send_application_files(offer, paths, files["match"])
-        if files["match"]:
-            store.save_match(store.url_hash(offer["url"]), files["match"])
-        score = f"%{files['match']['score']}" if files["match"] else "-"
-        print(f"    [CV] {files['changes']} bölüm uyarlandı, uygunluk: {score}, ön yazı: {'var' if files['cover_letter'] else 'yok'}"
-              f" (çıkarılan cümle: {files['letter_sentences_removed']}, ilan metni: {len(job_text)} karakter)")
+        allowed = tracking._allowed_chats()
+        links = {c: e for c, e in store.telegram_links().items() if c in allowed}
     except Exception as e:
-        print(f"    [CV-HATA] {type(e).__name__}")
+        print(f"[CV] Telegram bağlantıları okunamadı, CV üretimi kapalı: {type(e).__name__}")
+        return []
+    targets = []
+    for profile in application.profiles():
+        email = config.ALLOWED_EMAILS[profile] if profile < len(config.ALLOWED_EMAILS) else None
+        chats = [c for c, e in links.items() if email and e == email]
+        if not chats and profile == 0:
+            chats = [str(c) for c in config.TELEGRAM_CV_CHAT_IDS if links.get(str(c), email) == email]
+        if chats:
+            targets.append((profile, chats))
+        else:
+            print(f"[CV] {profile + 1}. kişinin Telegram sohbeti bağlı değil (/bagla); onun CV'leri üretilmeyecek.")
+    return targets
+
+
+def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[str]]]):
+    """Ilana gore her kisi icin kendi CV'sinden CV + on yazi uretip kendi sohbetine gonderir.
+    Icerik loglanmaz (Actions loglari herkese acik)."""
+    for profile, chats in targets:
+        try:
+            files = application.build_application(offer, job_text, profile)
+            paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
+            notify.send_application_files(offer, paths, files["match"], chats)
+            if files["match"]:
+                store.save_match(store.url_hash(offer["url"]), files["match"], profile)
+            score = f"%{files['match']['score']}" if files["match"] else "-"
+            print(f"    [CV {profile + 1}] {files['changes']} bölüm uyarlandı, uygunluk: {score},"
+                  f" ön yazı: {'var' if files['cover_letter'] else 'yok'} (çıkarılan cümle: {files['letter_sentences_removed']},"
+                  f" ilan metni: {len(job_text)} karakter)")
+        except Exception as e:
+            print(f"    [CV-HATA {profile + 1}] {type(e).__name__}")
 
 
 def run(dry_run: bool = False, only_source: str | None = None):
@@ -68,7 +93,6 @@ def run(dry_run: bool = False, only_source: str | None = None):
     notified_titles = set()
     applications_made = 0
     reader = None
-    make_applications = not dry_run and application.available()
     if not dry_run:
         # Saatlik takip isi gecikirse diye: bekleyen "Basvurdum / Gorusme ..." buton basmalarini burada da isle
         try:
@@ -76,7 +100,9 @@ def run(dry_run: bool = False, only_source: str | None = None):
             notify._run(tracking.process_updates())
         except Exception as e:
             print(f"[tracking] islenemedi: {type(e).__name__}")
-    if not dry_run and not make_applications:
+    cv_targets = _cv_targets() if not dry_run else []
+    make_applications = bool(cv_targets)
+    if not dry_run and not application.profiles():
         print("[CV] Ana CV veya NVIDIA_API_KEY yok; CV/ön yazı üretimi kapalı.")
 
     # Telegram'dan "/geri <link>" ile geri alinan (yanlislikla sinif sartiyla elenmis) ilanlarin CV'leri
@@ -86,7 +112,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
             print(f"\n=== geri alinan ilanlar ({len(pending)}) ===")
             with JobPageReader() as pending_reader:
                 for doc_id, offer in pending[:config.MAX_APPLICATIONS_PER_RUN]:
-                    _send_application(offer, _read_job_text(pending_reader, offer["url"]))
+                    _send_application(offer, _read_job_text(pending_reader, offer["url"]), cv_targets)
                     store.clear_cv_pending(doc_id)
                     applications_made += 1
 
@@ -154,7 +180,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
             notify.notify_new_offer(offer)
             print(f"  [YENİ] {offer['title']} — {offer.get('company')}")
             if make_applications and applications_made < config.MAX_APPLICATIONS_PER_RUN:
-                _send_application(offer, job_text)
+                _send_application(offer, job_text, cv_targets)
                 applications_made += 1
 
         # Tarayiciyi kaynak bitince kapat: sonraki scraper'lar kendi Playwright'larini acabilsin

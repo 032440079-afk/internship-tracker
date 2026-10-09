@@ -40,11 +40,11 @@ async def _send_all(text: str, reply_markup=None):
             print(f"[notify] chat_id={chat_id} için mesaj gönderilemedi: {e}")
 
 
-async def _send_documents(paths: list[str], caption: str):
-    if not config.TELEGRAM_BOT_TOKEN or not config.TELEGRAM_CHAT_IDS:
+async def _send_documents(paths: list[str], caption: str, chat_ids: list[str]):
+    if not config.TELEGRAM_BOT_TOKEN:
         return
     bot = Bot(token=config.TELEGRAM_BOT_TOKEN)
-    for chat_id in config.TELEGRAM_CV_CHAT_IDS:
+    for chat_id in chat_ids:
         for path in paths:
             try:
                 with open(path, "rb") as f:
@@ -70,14 +70,15 @@ def send_text(text: str):
     _run(_send_all(text))
 
 
-def send_application_files(offer: dict, paths: list[str], match: dict | None = None):
+def send_application_files(offer: dict, paths: list[str], match: dict | None, chat_ids: list[str]):
+    """CV / on yazi sadece o kisinin sohbet(ler)ine gider."""
     caption = f"📎 {offer.get('company', '')} — {offer.get('title', '')}"
     if match:
         caption += f"\n📊 Uygunluk: %{match['score']} ({match['met']}/{match['total']} temel şart CV'nde var)"
         if match["missing"]:
             caption += "\nEksik görünen: " + ", ".join(match["missing"])
     caption = caption[:1000]
-    _run(_send_documents(paths, caption))
+    _run(_send_documents(paths, caption, chat_ids))
 
 
 def send_ineligible_summary(items: list[tuple[dict, str, str]]):
