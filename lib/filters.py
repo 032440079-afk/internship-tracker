@@ -4,7 +4,7 @@ uygun olup olmadığına karar veren basit anahtar kelime filtresi.
 """
 import re
 
-from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS
+from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS, NON_EUROPE_ISO3
 
 # Kaan Turkiye'de okuyup Erasmus+ ile tam zamanli staj ariyor. Su ilanlar ona uymaz:
 #  - Werkstudent / working student: Almanya'daki bir universiteye kayitli ogrenciler icin yari zamanli is
@@ -28,7 +28,24 @@ def is_internship_type(title: str, description: str = "") -> bool:
 
 def is_europe_location(location: str) -> bool:
     loc = (location or "").lower()
-    return not any(kw in loc for kw in NON_EUROPE_KEYWORDS)
+    if any(kw in loc for kw in NON_EUROPE_KEYWORDS):
+        return False
+    return not (set(re.findall(r"\b[A-Z]{3}\b", location or "")) & NON_EUROPE_ISO3)
+
+
+def has_excluded_keyword(title: str) -> bool:
+    t = (title or "").lower()
+    return any(bad in t for bad in EXCLUDE_KEYWORDS)
+
+
+def fix_mojibake(text: str) -> str:
+    """Kaynakta yanlis kodlanmis metni duzeltir ("stationÃ¤re" -> "stationäre")."""
+    if "Ã" not in (text or ""):
+        return text
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
 
 def is_non_internship_role(title: str) -> bool:
     """Basligi Werkstudent / duales Studium / trainee / tez olan ve staj secenegi sunmayan ilanlar."""
