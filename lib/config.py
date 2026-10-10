@@ -107,6 +107,10 @@ NON_EUROPE_KEYWORDS = [
     "bangkok", "ho chi minh", "hanoi", "mumbai", "bangalore", "delhi",
     "sao paulo", "rio de janeiro", "mexico city", "hyderabad", "pune",
     "johannesburg", "cape town", "pretoria", "durban", "cairo", "casablanca", "tunis", "lagos", "nairobi",
+    "costa rica", "dominican", "cincinnati", "mason bus", "detroit", "chicago", "new york", "atlanta", "dallas",
+    "houston", "texas", "california", "michigan", "ohio", "alabama", "tuscaloosa", "mobile area",
+    "tianjin", "suzhou", "shenzhen", "guangzhou", "chengdu", "wuxi", "hai phong", "haiphong", "penang",
+    "pulau pinang", "rayong",
 ]
 
 # Amazon gibi kaynaklar konumu "Sehir, Bolge, ZAF" gibi 3 harfli ulke koduyla yaziyor
@@ -114,6 +118,18 @@ NON_EUROPE_ISO3 = {
     "ZAF", "EGY", "MAR", "TUN", "NGA", "KEN", "IND", "PAK", "BGD", "LKA", "CHN", "HKG", "TWN", "JPN", "KOR", "SGP",
     "MYS", "IDN", "THA", "PHL", "VNM", "AUS", "NZL", "USA", "CAN", "MEX", "BRA", "ARG", "CHL", "COL", "PER", "CRI",
     "ARE", "SAU", "QAT", "KWT", "BHR", "ISR", "JOR",
+}
+
+# Bazi kaynaklar (Bosch SmartRecruiters, Workday) konumu "Sehir, US" / "Sehir, MI" gibi 2 harfli ulke ya da ABD eyalet
+# koduyla bitiriyor. Avrupa ulke kodlariyla cakisan eyalet kodlari (AL Arnavutluk, DE Almanya, MD Moldova, ME Karadag,
+# MT Malta) burada yok.
+NON_EUROPE_ISO2 = {
+    "US", "CA", "MX", "BR", "AR", "CL", "CO", "PE", "CR", "DO", "CN", "HK", "TW", "JP", "KR", "SG", "MY", "ID", "TH",
+    "PH", "VN", "IN", "PK", "BD", "LK", "AU", "NZ", "ZA", "EG", "MA", "TN", "NG", "KE", "AE", "SA", "QA", "KW", "BH",
+    "IL", "JO",
+    # ABD eyaletleri
+    "AK", "AZ", "CT", "FL", "GA", "HI", "IA", "KS", "KY", "LA", "MI", "MN", "MO", "MS", "NC", "ND", "NE", "NH", "NJ",
+    "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY",
 }
 
 REQUEST_HEADERS = {
