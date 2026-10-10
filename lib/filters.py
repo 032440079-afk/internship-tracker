@@ -4,7 +4,7 @@ uygun olup olmadığına karar veren basit anahtar kelime filtresi.
 """
 import re
 
-from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS, NON_EUROPE_ISO3
+from lib.config import RELEVANT_KEYWORDS, EXCLUDE_KEYWORDS, INTERNSHIP_KEYWORDS, NON_EUROPE_KEYWORDS, NON_EUROPE_ISO3, NON_EUROPE_ISO2
 
 # Kaan Turkiye'de okuyup Erasmus+ ile tam zamanli staj ariyor. Su ilanlar ona uymaz:
 #  - Werkstudent / working student: Almanya'daki bir universiteye kayitli ogrenciler icin yari zamanli is
@@ -30,7 +30,10 @@ def is_europe_location(location: str) -> bool:
     loc = (location or "").lower()
     if any(kw in loc for kw in NON_EUROPE_KEYWORDS):
         return False
-    return not (set(re.findall(r"\b[A-Z]{3}\b", location or "")) & NON_EUROPE_ISO3)
+    if set(re.findall(r"\b[A-Z]{3}\b", location or "")) & NON_EUROPE_ISO3:
+        return False
+    iso2 = re.search(r",\s*([A-Z]{2})\s*$", location or "")  # "Grand Rapids, US" / "Troy, MI"
+    return not (iso2 and iso2.group(1) in NON_EUROPE_ISO2)
 
 
 def has_excluded_keyword(title: str) -> bool:
