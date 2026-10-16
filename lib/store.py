@@ -41,10 +41,10 @@ def existing_offer(url: str) -> dict | None:
     return doc.to_dict() if doc.exists else None
 
 
-def fill_posted_date(url: str, posted: str, approx: bool = False):
-    """Yayin tarihi ozelliginden once kaydedilmis ilana sonradan yayin tarihini yazar."""
+def fill_missing(url: str, fields: dict):
+    """Kayitli ilanda bos kalmis alanlari (yayin tarihi, konum) sonradan yazar."""
     _init()
-    _db.collection("offers").document(url_hash(url)).update({"postedDate": posted, "postedApprox": bool(approx)})
+    _db.collection("offers").document(url_hash(url)).update(fields)
 
 
 def save_offer(offer: dict):

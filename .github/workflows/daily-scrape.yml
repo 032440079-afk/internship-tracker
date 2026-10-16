@@ -57,6 +57,7 @@ jobs:
           APPLICANT_NOTE_2: ${{ secrets.APPLICANT_NOTE_2 }}   # istege bagli: 2. kisinin kendi kisa notu
           ALLOWED_EMAILS: ${{ secrets.ALLOWED_EMAILS }}   # siteye girebilecek Google hesaplari, virgulle; ilki Kaan, ikincisi cv_2
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          PYTHONUNBUFFERED: "1"   # log satirlari aninda yazilsin (zaman damgalari dogru olsun)
         run: python run.py
 
       - name: Dashboard commit et

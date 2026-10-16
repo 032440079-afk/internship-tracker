@@ -42,6 +42,13 @@ _CLASS_WORDS = re.compile(r"semester|year|jahr|master|bachelor|graduat|absolvent
                           r"student|final|sinif|sınıf|année|annee|anno|niveau|bac\+", re.I)
 # "penultimate or final year" 3. sinifi da kapsar: Kaan 2027 yazinda 3. sinifa geciyor
 _PENULTIMATE = re.compile(r"penultimate|vorletzt|second[- ]to[- ]last|pre-?final", re.I)
+# Dusuk alt sinir: "mindestens drittes Fachsemester", "ab dem 4. Semester", "30 semester hours". 2027 yazinda 4 donem
+# bitmis olacagi icin bunlar engel degil (model bazen bunlari da eleme gerekcesi yapiyor).
+_ORDINALS = r"[1-6]\.?|erst|zweit|dritt|viert|fünft|funft|sechst|first|second|third|fourth|fifth|sixth|1st|2nd|3rd|4th|5th|6th"
+_LOW_MINIMUM = re.compile(
+    rf"(mindestens|ab|from|at least|minimum|min\.)\s+((dem|im|in|in the|in your)\s+)?({_ORDINALS})[a-z]*\s*"
+    r"(fach|studien)?semester"
+    r"|semester hours|credit hours", re.I)
 
 
 def check(offer: dict, job_text: str) -> tuple[bool, str, str]:
@@ -72,7 +79,7 @@ def check(offer: dict, job_text: str) -> tuple[bool, str, str]:
     if not _evidence_in_text(evidence, job_text):
         print(f"    [uygunluk] eleme gerekcesi ilanda bulunamadi, ilan tutuldu: {offer.get('title')}")
         return True, reason, ""
-    if not _CLASS_WORDS.search(evidence) or _PENULTIMATE.search(evidence):
+    if not _CLASS_WORDS.search(evidence) or _PENULTIMATE.search(evidence) or _LOW_MINIMUM.search(evidence):
         print(f"    [uygunluk] alinti bir sinif sarti degil / 3. sinifi kapsiyor, ilan tutuldu: {offer.get('title')}")
         return True, reason, ""
     return False, reason, evidence

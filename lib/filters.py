@@ -32,8 +32,10 @@ def is_europe_location(location: str) -> bool:
         return False
     if set(re.findall(r"\b[A-Z]{3}\b", location or "")) & NON_EUROPE_ISO3:
         return False
-    iso2 = re.search(r",\s*([A-Z]{2})\s*$", location or "")  # "Grand Rapids, US" / "Troy, MI"
-    return not (iso2 and iso2.group(1) in NON_EUROPE_ISO2)
+    # Virgulle ayrilmis son 2 harfli parca ulke (ya da ABD eyaleti) kodu sayilir: "Grand Rapids, US", "Troy, MI",
+    # "Hagerstown, MD, US, 21742" -> US. "Milano, MI, IT" -> IT (Avrupa; MI burada il kodu).
+    codes = [p.strip() for p in (location or "").split(",") if re.fullmatch(r"[A-Z]{2}", p.strip())]
+    return not (codes and codes[-1] in NON_EUROPE_ISO2)
 
 
 def has_excluded_keyword(title: str) -> bool:
