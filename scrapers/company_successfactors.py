@@ -56,10 +56,11 @@ def _parse_page(html: str, company_name: str, base_url: str):
 
         row = a.find_parent("tr")
         date_el = row.select_one(".jobDate") if row else None
+        loc_el = row.select_one(".jobLocation") if row else None  # "Greensboro, NC, US" / "Göteborg, SE"
         offers.append({
             "title": title,
             "company": company_name,
-            "location": "",
+            "location": loc_el.get_text(" ", strip=True) if loc_el else "",
             "country": "",
             "url": url,
             "description": "",
@@ -102,6 +103,8 @@ def scrape() -> list[dict]:
         try:
             offers = _scrape_company(company["name"], company["search_url"], company["base_url"], session)
             all_offers.extend(offers)
+            located = sum(1 for o in offers if o["location"])
+            print(f"[successfactors] {company['name']}: {len(offers)} ilan, {located} tanesinde konum var")
         except Exception as e:
             print(f"[HATA] {company['name']} scrape edilemedi: {e}")
 

@@ -17,7 +17,7 @@ import importlib
 import traceback
 
 from lib import store, notify, export_html, ai_filter, application, config, eligibility, tracking
-from lib.filters import is_relevant, fix_mojibake
+from lib.filters import is_relevant, is_europe_location, fix_mojibake
 from lib.job_details import JobPageReader
 
 # Aktif scraper modülleri. Her biri scrapers/ altında, scrape() fonksiyonu içerir.
@@ -66,6 +66,13 @@ def _cv_targets() -> list[tuple[int, list[str]]]:
         else:
             print(f"[CV] {profile + 1}. kişinin Telegram sohbeti bağlı değil (/bagla); onun CV'leri üretilmeyecek.")
     return targets
+
+
+def _non_europe_but_relevant(offer: dict, source_key: str) -> bool:
+    """Sadece konumu yuzunden elenen SuccessFactors ilani mi (konum alani 2026-10'dan once bos kaydediliyordu)."""
+    return (source_key == "company_successfactors" and bool(offer.get("location"))
+            and not is_europe_location(offer["location"])
+            and is_relevant(offer.get("title", ""), offer.get("description", ""), "")[0])
 
 
 def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[str]]]):
@@ -136,13 +143,20 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
         candidates = []
         seen_urls = set()
-        dates_filled = 0
+        dates_filled = locations_filled = 0
         for offer in offers:
             for field in ("title", "company", "location"):
                 offer[field] = fix_mojibake(offer.get(field, ""))
             relevant, matches = is_relevant(
                 offer.get("title", ""), offer.get("description", ""), offer.get("location", "")
             )
+            if not relevant and not dry_run and _non_europe_but_relevant(offer, source_key):
+                # SuccessFactors konumu eskiden kaydedilmiyordu: Avrupa disi oldugu yeni anlasilan kayitli ilana konumu
+                # yaz ki panodan elensin
+                existing = store.existing_offer(offer["url"])
+                if existing is not None and not existing.get("location"):
+                    store.fill_missing(offer["url"], {"location": offer["location"]})
+                    locations_filled += 1
             if not relevant or offer["url"] in seen_urls:
                 continue
             seen_urls.add(offer["url"])
@@ -151,14 +165,21 @@ def run(dry_run: bool = False, only_source: str | None = None):
             if not dry_run:
                 existing = store.existing_offer(offer["url"])
                 if existing is not None:  # zaten kayıtlı, atla
-                    # Yayin tarihi ozelliginden once kaydedilmis ilanlara tarihi sonradan yaz (sitede gorunsun)
+                    # Kaynak sonradan veri vermeye basladiysa (yayin tarihi, konum) eski kayda yaz: sitede gorunsun,
+                    # Avrupa disi konumlar panodan elensin
+                    missing = {}
                     if offer.get("postedDate") and not existing.get("postedDate"):
-                        store.fill_posted_date(offer["url"], offer["postedDate"], offer.get("postedApprox", False))
+                        missing.update(postedDate=offer["postedDate"], postedApprox=bool(offer.get("postedApprox")))
                         dates_filled += 1
+                    if offer.get("location") and not existing.get("location"):
+                        missing["location"] = offer["location"]
+                        locations_filled += 1
+                    if missing:
+                        store.fill_missing(offer["url"], missing)
                     continue
             candidates.append(offer)
-        if dates_filled:
-            print(f"{dates_filled} kayıtlı ilana yayın tarihi eklendi")
+        if dates_filled or locations_filled:
+            print(f"Kayıtlı ilanlara eklenen: {dates_filled} yayın tarihi, {locations_filled} konum")
 
         # Anahtar kelime filtresinden geçen yeni ilanları yapay zekâyla ikinci kez ele
         for offer in ai_filter.filter_offers(candidates):
