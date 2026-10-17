@@ -144,6 +144,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
         candidates = []
         seen_urls = set()
         dates_filled = locations_filled = 0
+        seen_existing = []
         for offer in offers:
             for field in ("title", "company", "location"):
                 offer[field] = fix_mojibake(offer.get(field, ""))
@@ -165,6 +166,7 @@ def run(dry_run: bool = False, only_source: str | None = None):
             if not dry_run:
                 existing = store.existing_offer(offer["url"])
                 if existing is not None:  # zaten kayıtlı, atla
+                    seen_existing.append(offer["url"])
                     # Kaynak sonradan veri vermeye basladiysa (yayin tarihi, konum) eski kayda yaz: sitede gorunsun,
                     # Avrupa disi konumlar panodan elensin
                     missing = {}
@@ -180,6 +182,11 @@ def run(dry_run: bool = False, only_source: str | None = None):
             candidates.append(offer)
         if dates_filled or locations_filled:
             print(f"Kayıtlı ilanlara eklenen: {dates_filled} yayın tarihi, {locations_filled} konum")
+        if seen_existing:
+            try:
+                store.mark_seen(seen_existing)
+            except Exception as e:
+                print(f"[HATA] lastSeen guncellenemedi: {type(e).__name__}")
 
         # Anahtar kelime filtresinden geçen yeni ilanları yapay zekâyla ikinci kez ele
         for offer in ai_filter.filter_offers(candidates):
