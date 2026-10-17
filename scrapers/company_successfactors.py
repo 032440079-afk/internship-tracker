@@ -3,6 +3,8 @@ SAP SuccessFactors tabanli kariyer sitelerini tarar (Festo, ZF, VW Group, Junghe
 Erisilebilir format sayfasi /search/ duz HTML donduruyor.
 """
 import re
+from urllib.parse import quote
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -70,28 +72,40 @@ def _parse_page(html: str, company_name: str, base_url: str):
     return offers
 
 
-def _scrape_company(name: str, search_url: str, base_url: str, session: requests.Session):   
-    all_offers = []
-    seen_urls = set()
+# Genel listede MAX_PAGES sayfayi dolduran (ilan sayisi tavana takilan) buyuk sirketlerde stajlar son sayfalarda
+# kalabiliyor: o sirketlerde staj kelimeleriyle ayrica aranir
+INTERNSHIP_QUERIES = ["intern", "internship", "praktikum", "praktikant", "stage", "stagiaire", "co-op"]
+QUERY_MAX_PAGES = 4
 
-    for page in range(MAX_PAGES):
-        startrow = page * RESULTS_PER_PAGE
-        url = search_url if startrow == 0 else f"{search_url}?startrow={startrow}"
 
-        resp = session.get(url, headers=REQUEST_HEADERS, timeout=25)
+def _collect(name: str, base_url: str, session: requests.Session, page_url, max_pages: int,
+             all_offers: list, seen_urls: set) -> int:
+    """page_url(startrow) sayfalarini gezer, yeni ilanlari all_offers'a ekler; gezilen sayfa sayisini dondurur."""
+    for page in range(max_pages):
+        resp = session.get(page_url(page * RESULTS_PER_PAGE), headers=REQUEST_HEADERS, timeout=25)
         if resp.status_code != 200:
-            break
-
-        page_offers = _parse_page(resp.text, name, base_url)
-        new_offers = [o for o in page_offers if o["url"] not in seen_urls]
-
+            return page
+        new_offers = [o for o in _parse_page(resp.text, name, base_url) if o["url"] not in seen_urls]
         if not new_offers:
-            break
-
+            return page
         for o in new_offers:
             seen_urls.add(o["url"])
         all_offers.extend(new_offers)
+    return max_pages
 
+
+def _scrape_company(name: str, search_url: str, base_url: str, session: requests.Session):
+    all_offers, seen_urls = [], set()
+    pages = _collect(name, base_url, session,
+                     lambda row: search_url if row == 0 else f"{search_url}?startrow={row}",
+                     MAX_PAGES, all_offers, seen_urls)
+    if pages >= MAX_PAGES:  # tavan: stajlari kelimeyle ayrica ara
+        before = len(all_offers)
+        for q in INTERNSHIP_QUERIES:
+            _collect(name, base_url, session, lambda row, q=q: f"{search_url}?q={quote(q)}&startrow={row}",
+                     QUERY_MAX_PAGES, all_offers, seen_urls)
+        print(f"[successfactors] {name}: genel liste {MAX_PAGES} sayfa tavanina takildi, staj aramasiyla"
+              f" {len(all_offers) - before} ilan daha bulundu")
     return all_offers
 
 

@@ -8,15 +8,22 @@ Her kullanicinin durumlari ayridir: trackers/{email}/applications/{ilan_id}.
 """
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from lib import store
 from lib.filters import is_europe_location, is_non_internship_role, has_excluded_keyword, fix_mojibake
 OUTPUT_PATH = "docs/index.html"
+# Kaynakta bu kadar gundur gorulmeyen ilan "kapanmis olabilir" sayilir: Yeni sekmesinde gosterilmez (basvurulanlar kalir).
+# Sadece tum ilan listesini gezen kaynaklarda uygulanir; Arbeitsagentur / Arbeitnow gibi en yeni N sayfayi okuyan
+# kaynaklarda eski ama acik ilanlar listeye girmeyebilir.
+STALE_DAYS = 10
+STALE_SOURCES = {"company_successfactors", "company_workday", "company_smartrecruiters", "company_greenhouse",
+                 "company_amazon", "company_continental"}
 
 
 def _fetch_all_offers() -> list[dict]:
     store._init()
     docs = store._db.collection("offers").order_by("scrapedAt", direction="DESCENDING").stream()
+    stale_before = datetime.now(timezone.utc) - timedelta(days=STALE_DAYS)
     offers = []
     for doc in docs:
         d = doc.to_dict()
@@ -32,6 +39,9 @@ def _fetch_all_offers() -> list[dict]:
             "url": d.get("url", ""), "scrapedAt": scraped.isoformat() if scraped else "",
             "postedDate": d.get("postedDate") or "", "postedApprox": bool(d.get("postedApprox")),
         })
+        last_seen = max((t for t in (scraped, d.get("lastSeen")) if t), default=None)
+        if last_seen and last_seen < stale_before and d.get("source") in STALE_SOURCES:
+            offers[-1]["stale"] = True
     return offers
 
 
@@ -39,7 +49,8 @@ def render(offers: list[dict], generated_at: str) -> str:
     # "</" kacisi: ilan basliginda "</script>" olsa bile sayfa bozulmasin / kod calismasin
     data_json = json.dumps(offers, ensure_ascii=False).replace("</", "<\\/")
     return (HTML_TEMPLATE.replace("__DATA_JSON__", data_json)
-            .replace("__GENERATED_AT__", generated_at).replace("__TOTAL__", str(len(offers))))
+            .replace("__GENERATED_AT__", generated_at)
+            .replace("__TOTAL__", str(sum(1 for o in offers if not o.get("stale")))))
 
 
 def generate():
@@ -48,7 +59,8 @@ def generate():
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(render(offers, generated_at))
-    print(f"[export_html] {len(offers)} ilan yazildi -> {OUTPUT_PATH}")
+    stale = sum(1 for o in offers if o.get("stale"))
+    print(f"[export_html] {len(offers)} ilan yazildi ({stale} tanesi {STALE_DAYS}+ gundur kaynakta yok) -> {OUTPUT_PATH}")
 
 
 HTML_TEMPLATE = r"""<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
@@ -137,7 +149,7 @@ const BY_ID = Object.fromEntries(DATA.map(o => [o.id, o]));
 const STATUS = {applied:'📨 Başvurdum', interview:'🗣 Görüşme', rejected:'❌ Red', offer:'🎉 Kabul', skip:'🙈 Gizlendi'};
 const APPLIED = ['applied','interview','rejected','offer'];
 const TABS = [
-  {key:'new', label:'Yeni', has: s => !s},
+  {key:'new', label:'Yeni', has: (s, o) => !s && !o.stale},  // kaynakta artik gorunmeyenler Yeni'de yok
   {key:'applied', label:'Başvurdum', has: s => s === 'applied'},
   {key:'interview', label:'Görüşme', has: s => s === 'interview'},
   {key:'done', label:'Sonuçlanan', has: s => s === 'rejected' || s === 'offer'},
@@ -195,7 +207,7 @@ function card(o){
   return '<div class="card" id="c-' + o.id + '"><div class="top"><a class="title" href="' + esc(safeUrl(o.url)) + '" target="_blank" rel="noopener">' + esc(o.title) + '</a>'
     + ((isNew || fitBadge(o.id)) ? '<div class="badges">' + (isNew ? '<span class="badge b-new">YENİ</span>' : '') + fitBadge(o.id) + '</div>' : '') + '</div>'
     + '<div class="sub">' + esc(o.company || '-') + ' · ' + esc(o.location || 'konum yok') + '</div>'
-    + '<div class="dates">' + dateLine(o) + '</div>'
+    + '<div class="dates">' + dateLine(o) + (o.stale ? ' · ⚠️ kaynakta artık görünmüyor, kapanmış olabilir' : '') + '</div>'
     + (m && m.missing && m.missing.length ? '<div class="missing">' + m.missing.map(x => '<span class="chip">Eksik: ' + esc(x) + '</span>').join('') + '</div>' : '')
     + state + (actions ? '<div class="actions">' + actions + '</div>' : '') + '</div>';
 }
@@ -203,7 +215,7 @@ function card(o){
 function filtered(){
   const q = $('search').value.trim().toLowerCase(), company = $('company').value, sort = $('sort').value;
   const t = TABS.find(x => x.key === tab);
-  let list = DATA.filter(o => (!user || t.has(statusOf(o.id)))
+  let list = DATA.filter(o => (user ? t.has(statusOf(o.id), o) : !o.stale)
     && (!company || o.company === company)
     && (!q || (o.title + ' ' + o.company + ' ' + o.location).toLowerCase().includes(q)));
   const fit = o => (myMatch(o.id) || {score: -1}).score;
@@ -218,7 +230,7 @@ function renderTabs(){
   if (!user) { $('tabs').hidden = true; return; }
   $('tabs').hidden = false;
   $('tabs').innerHTML = TABS.map(t => '<button class="tab' + (t.key === tab ? ' active' : '') + '" data-tab="' + t.key + '">' + t.label
-    + '<span class="n">' + DATA.filter(o => t.has(statusOf(o.id))).length + '</span></button>').join('');
+    + '<span class="n">' + DATA.filter(o => t.has(statusOf(o.id), o)).length + '</span></button>').join('');
 }
 
 function renderStats(){

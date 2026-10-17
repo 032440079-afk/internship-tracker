@@ -41,6 +41,18 @@ def existing_offer(url: str) -> dict | None:
     return doc.to_dict() if doc.exists else None
 
 
+def mark_seen(urls: list[str]):
+    """Kaynakta bu calismada tekrar gorulen kayitli ilanlarin lastSeen zamanini gunceller (kapanan ilanlari ayirmak icin)."""
+    _init()
+    now = datetime.now(timezone.utc)
+    col = _db.collection("offers")
+    for start in range(0, len(urls), 400):  # Firestore toplu yazma siniri 500
+        batch = _db.batch()
+        for url in urls[start:start + 400]:
+            batch.update(col.document(url_hash(url)), {"lastSeen": now})
+        batch.commit()
+
+
 def fill_missing(url: str, fields: dict):
     """Kayitli ilanda bos kalmis alanlari (yayin tarihi, konum) sonradan yazar."""
     _init()
