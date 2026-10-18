@@ -34,9 +34,29 @@ COMPANIES = [
 
 RESULTS_PER_PAGE = 20
 MAX_PAGES = 100  # 30 sayfa (600 ilan) Airbus/NXP/ZEISS gibi buyuk sirketlerde yetmiyordu
+# Toplam ilani MAX_PAGES sayfayi asan sirketlerde stajlar listenin sonunda kalabiliyor: kelimeyle ayrica aranir
+INTERNSHIP_QUERIES = ["intern", "internship", "praktikum", "praktikant", "stage", "stagiaire"]
+QUERY_MAX_PAGES = 10
 
 
 def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: requests.Session):
+    all_offers, total = _search(name, tenant, wd_host, site, session, "", MAX_PAGES)
+    if total and total > MAX_PAGES * RESULTS_PER_PAGE:
+        seen = {o["url"] for o in all_offers}
+        before = len(all_offers)
+        for q in INTERNSHIP_QUERIES:
+            found, _ = _search(name, tenant, wd_host, site, session, q, QUERY_MAX_PAGES)
+            for o in found:
+                if o["url"] not in seen:
+                    seen.add(o["url"])
+                    all_offers.append(o)
+        print(f"[workday] {name}: {total} ilandan {MAX_PAGES * RESULTS_PER_PAGE} tanesi okunabildi, staj aramasiyla"
+              f" {len(all_offers) - before} ilan daha bulundu")
+    return all_offers
+
+
+def _search(name: str, tenant: str, wd_host: str, site: str, session: requests.Session, query: str, max_pages: int):
+    """(ilanlar, sitenin bildirdigi toplam ilan sayisi) dondurur."""
     api_url = f"https://{tenant}.{wd_host}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs"
     base_url = f"https://{tenant}.{wd_host}.myworkdayjobs.com/{site}"
 
@@ -47,12 +67,12 @@ def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: re
     offset = 0
     total = None
 
-    while offset < MAX_PAGES * RESULTS_PER_PAGE:
+    while offset < max_pages * RESULTS_PER_PAGE:
         body = {
             "appliedFacets": {},
             "limit": RESULTS_PER_PAGE,
             "offset": offset,
-            "searchText": "",
+            "searchText": query,
         }
 
         resp = session.post(api_url, json=body, headers=headers, timeout=25)
@@ -89,7 +109,7 @@ def _scrape_company(name: str, tenant: str, wd_host: str, site: str, session: re
         if total is not None and offset >= total:
             break
 
-    return all_offers
+    return all_offers, total
 
 
 def scrape() -> list[dict]:
