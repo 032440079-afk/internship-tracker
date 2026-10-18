@@ -17,7 +17,7 @@ OUTPUT_PATH = "docs/index.html"
 # kaynaklarda eski ama acik ilanlar listeye girmeyebilir.
 STALE_DAYS = 10
 STALE_SOURCES = {"company_successfactors", "company_workday", "company_smartrecruiters", "company_greenhouse",
-                 "company_amazon", "company_continental"}
+                 "company_amazon"}
 
 
 def _fetch_all_offers() -> list[dict]:

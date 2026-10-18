@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from lib.config import REQUEST_HEADERS
 
 START_URL = "https://jobs.continental.com/en/a-z-liste/"
-MAX_PAGES = 10  # guvenlik limiti
+MAX_PAGES = 60  # guvenlik limiti (A-Z liste; 10 sayfa ~450 ilanda kesiyordu, alfabede sondaki ilanlar hic gorulmuyordu)
 
 JOB_URL_PATTERN = re.compile(r"/en/detail-page/job-detail/")
 
@@ -86,6 +86,7 @@ def scrape() -> list[dict]:
         url = next_url
         page_num += 1
 
+    print(f"[continental] {min(page_num, MAX_PAGES)} sayfa okundu" + (" (tavana takildi)" if page_num > MAX_PAGES else ""))
     return all_offers
 
 
