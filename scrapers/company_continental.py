@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from lib.config import REQUEST_HEADERS
 
 START_URL = "https://jobs.continental.com/en/a-z-liste/"
-MAX_PAGES = 60  # guvenlik limiti (A-Z liste; 10 sayfa ~450 ilanda kesiyordu, alfabede sondaki ilanlar hic gorulmuyordu)
+MAX_PAGES = 60  # guvenlik limiti (A-Z listenin tamami 2026-10'da 3 sayfa / ~450 ilan)
 
 JOB_URL_PATTERN = re.compile(r"/en/detail-page/job-detail/")
 
