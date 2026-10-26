@@ -203,7 +203,8 @@ function card(o){
     const n = t ? Math.floor((Date.now() - t) / 864e5) : null;
     state = '<div class="state">' + STATUS[s] + (n !== null ? ' · ' + (s === 'applied' ? n + ' gündür cevap bekleniyor' : rel(n)) : '') + '</div>';
   }
-  const actions = user ? (ACTIONS[tab] || []).map(k => '<button class="btn small" data-id="' + o.id + '" data-act="' + k + '">' + LABEL[k] + '</button>').join('') : '';
+  const actions = user ? (ACTIONS[tab] || []).map(k => '<button class="btn small" data-id="' + o.id + '" data-act="' + k + '">' + LABEL[k] + '</button>').join('')
+    + (tab === 'new' ? '<button class="btn small" data-copy="' + o.id + '" title="Chrome\'daki Claude paneline yapıştırılacak başvuru komutunu kopyalar">🤖 Claude ile başvur</button>' : '') : '';
   return '<div class="card" id="c-' + o.id + '"><div class="top"><a class="title" href="' + esc(safeUrl(o.url)) + '" target="_blank" rel="noopener">' + esc(o.title) + '</a>'
     + ((isNew || fitBadge(o.id)) ? '<div class="badges">' + (isNew ? '<span class="badge b-new">YENİ</span>' : '') + fitBadge(o.id) + '</div>' : '') + '</div>'
     + '<div class="sub">' + esc(o.company || '-') + ' · ' + esc(o.location || 'konum yok') + '</div>'
@@ -279,6 +280,17 @@ async function setStatus(id, status){
 
 $('list').addEventListener('click', e => { const b = e.target.closest('button[data-act]'); if (!b) return;
   setStatus(b.dataset.id, b.dataset.act === 'reset' ? null : b.dataset.act); });
+// "Claude ile basvur": Chrome'daki Claude paneline yapistirilacak komutu kopyalar (basvuru asistani dosyasiyla birlikte)
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+  t.remove(); return ok;
+}
+$('list').addEventListener('click', async e => { const b = e.target.closest('button[data-copy]'); if (!b) return;
+  const o = BY_ID[b.dataset.copy];
+  const text = 'Şu ilana başvur: ' + o.title + ' — ' + (o.company || '') + '\n' + o.url;
+  toast(await copyText(text) ? "Kopyalandı: Chrome'daki Claude paneline yapıştır" : 'Kopyalanamadı: ' + text); });
 $('tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (!b) return; tab = b.dataset.tab; shown = 60; render(); });
 $('undo').addEventListener('click', () => undoFn && undoFn());
 $('more').addEventListener('click', () => { shown += 60; render(); });

@@ -105,3 +105,11 @@ sohbetine gönderilir (`/bagla` ile kendi e-postasına bağladığı sohbet).
 2. `ALLOWED_EMAILS` içinde onun Gmail adresi **ikinci** sırada olmalı.
 3. 2. kişi kendi Telegram sohbetinden bota `/bagla onun@gmail.com` yazar. Bağlanana kadar onun CV'leri üretilmez.
 4. İsteğe bağlı: `APPLICANT_NOTE_2` secret'ı = onun kendi kısa notu (ön yazıda kullanılır).
+
+## Claude in Chrome ile başvuru (yarı otomatik)
+
+Panoda (giriş yapınca) Yeni sekmesindeki her ilanda **🤖 Claude ile başvur** butonu var: "Şu ilana başvur: başlık —
+şirket + link" komutunu kopyalar. Chrome'daki Claude paneline önce kişisel **başvuru asistanı** dosyası (profil +
+kurallar) yapıştırılır, sonra bu komut. Claude formu profille doldurur, CV / ön yazı yüklemesinde ve profilde olmayan
+sorularda kişiye sorar, şifre / CAPTCHA / onay kutularına dokunmaz ve son "Gönder" adımından önce durur.
+Başvuru asistanı dosyası kişisel bilgi içerdiği için bu repoda tutulmaz.
