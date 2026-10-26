@@ -20,6 +20,10 @@ service cloud.firestore {
     match /matches/{offerId} {
       allow read: if isAllowed();
     }
+    // CV / on yazi indirme linkleri (Supabase, sureli): sadece GitHub Actions yazar, sadece sahibi okur
+    match /trackers/{email}/documents/{offerId} {
+      allow read: if isAllowed() && email == signedInEmail();
+    }
     match /trackers/{email}/applications/{offerId} {
       allow read, delete: if isAllowed() && email == signedInEmail();
       allow create, update: if isAllowed() && email == signedInEmail()
