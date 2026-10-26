@@ -16,7 +16,7 @@ from datetime import datetime
 import importlib
 import traceback
 
-from lib import store, notify, export_html, ai_filter, application, config, eligibility, tracking
+from lib import store, notify, export_html, ai_filter, application, config, eligibility, tracking, documents
 from lib.filters import is_relevant, is_europe_location, fix_mojibake
 from lib.job_details import JobPageReader
 
@@ -85,12 +85,27 @@ def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[
             notify.send_application_files(offer, paths, files["match"], chats)
             if files["match"]:
                 store.save_match(store.url_hash(offer["url"]), files["match"], profile)
+            stored = _store_documents(offer, files, profile)
             score = f"%{files['match']['score']}" if files["match"] else "-"
             print(f"    [CV {profile + 1}] {files['changes']} bölüm uyarlandı, uygunluk: {score},"
                   f" ön yazı: {'var' if files['cover_letter'] else 'yok'} (çıkarılan cümle: {files['letter_sentences_removed']},"
-                  f" ilan metni: {len(job_text)} karakter)")
+                  f" ilan metni: {len(job_text)} karakter){stored}")
         except Exception as e:
             print(f"    [CV-HATA {profile + 1}] {type(e).__name__}")
+
+
+def _store_documents(offer: dict, files: dict, profile: int) -> str:
+    """PDF'leri Supabase'e yukleyip panodaki indirme linklerini kisinin Firestore kaydina yazar; log eki dondurur."""
+    email = config.ALLOWED_EMAILS[profile] if profile < len(config.ALLOWED_EMAILS) else None
+    if not documents.enabled() or not email:
+        return ""
+    try:
+        doc_id = store.url_hash(offer["url"])
+        store.save_documents(email, doc_id, documents.upload_application(profile, doc_id, files["cv"], files["cover_letter"]))
+        return ", panoya yüklendi"
+    except Exception as e:  # mesaj sadece kendi hatalarimizda yazilir (requests hatalari URL / dosya adi icerebilir)
+        detail = f": {str(e)[:60]}" if isinstance(e, RuntimeError) else ""
+        return f", panoya yüklenemedi ({type(e).__name__}{detail})"
 
 
 def run(dry_run: bool = False, only_source: str | None = None):

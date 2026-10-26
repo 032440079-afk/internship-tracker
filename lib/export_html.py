@@ -161,7 +161,7 @@ const ACTIONS = {  // sekmeye gore kart butonlari
 };
 const LABEL = {applied:'📨 Başvurdum', skip:'🙈 İlgilenmiyorum', interview:'🗣 Görüşme', rejected:'❌ Red', offer:'🎉 Kabul', reset:'↩ Yeni\'ye al'};
 const $ = id => document.getElementById(id);
-let db = null, user = null, profile = -1, apps = {}, matches = {}, tab = 'new', shown = 60, lastVisit = '', undoFn = null;
+let db = null, user = null, profile = -1, apps = {}, matches = {}, docs = {}, tab = 'new', shown = 60, lastVisit = '', undoFn = null;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl = u => /^https?:\/\//i.test(u || '') ? u : '#';
@@ -193,6 +193,15 @@ function fitBadge(id){
   return '<span class="badge ' + cls + '" title="' + m.met + '/' + m.total + ' temel şart CV\'nde var">%' + m.score + ' uygun</span>';
 }
 
+// Bu ilan icin kisinin kendi CV / on yazisi (Supabase'te gizli dosya, sureli link; sadece kendisi okur)
+function docLinks(id){
+  const d = docs[id]; if (!d) return '';
+  const exp = d.expiresAt && d.expiresAt.toDate ? d.expiresAt.toDate() : null;
+  if (exp && exp < new Date()) return '<span class="chip">Belge linkinin süresi doldu</span>';
+  const a = (url, label) => url ? '<a class="btn small" href="' + esc(safeUrl(url)) + '" target="_blank" rel="noopener">' + label + '</a>' : '';
+  return a(d.cv, '📄 CV') + a(d.coverLetter, '📄 Ön yazı');
+}
+
 function card(o){
   const s = statusOf(o.id), a = apps[o.id];
   const isNew = lastVisit && o.scrapedAt > lastVisit && !s;
@@ -204,7 +213,8 @@ function card(o){
     state = '<div class="state">' + STATUS[s] + (n !== null ? ' · ' + (s === 'applied' ? n + ' gündür cevap bekleniyor' : rel(n)) : '') + '</div>';
   }
   const actions = user ? (ACTIONS[tab] || []).map(k => '<button class="btn small" data-id="' + o.id + '" data-act="' + k + '">' + LABEL[k] + '</button>').join('')
-    + (tab === 'new' ? '<button class="btn small" data-copy="' + o.id + '" title="Chrome\'daki Claude paneline yapıştırılacak başvuru komutunu kopyalar">🤖 Claude ile başvur</button>' : '') : '';
+    + (tab === 'new' ? '<button class="btn small" data-copy="' + o.id + '" title="Chrome\'daki Claude paneline yapıştırılacak başvuru komutunu kopyalar">🤖 Claude ile başvur</button>' : '')
+    + docLinks(o.id) : '';
   return '<div class="card" id="c-' + o.id + '"><div class="top"><a class="title" href="' + esc(safeUrl(o.url)) + '" target="_blank" rel="noopener">' + esc(o.title) + '</a>'
     + ((isNew || fitBadge(o.id)) ? '<div class="badges">' + (isNew ? '<span class="badge b-new">YENİ</span>' : '') + fitBadge(o.id) + '</div>' : '') + '</div>'
     + '<div class="sub">' + esc(o.company || '-') + ' · ' + esc(o.location || 'konum yok') + '</div>'
@@ -300,7 +310,7 @@ $('more').addEventListener('click', () => { shown += 60; render(); });
 function banner(html){ $('banner').innerHTML = html; $('banner').hidden = !html; }
 
 async function onUser(u){
-  user = u; apps = {}; matches = {}; profile = -1;
+  user = u; apps = {}; matches = {}; docs = {}; profile = -1;
   const key = 'lastVisit:' + (u ? u.email : 'anon');
   lastVisit = store.get(key) || ''; store.set(key, new Date().toISOString());
   if (!u) {
@@ -327,6 +337,8 @@ async function onUser(u){
       $('sortFit').hidden = !Object.keys(matches).some(myMatch);
     } catch (e) {}
   }
+  try { (await db.collection('trackers').doc(email).collection('documents').get()).forEach(d => docs[d.id] = d.data()); }
+  catch (e) {}  // kurallar henuz yayinlanmadiysa belge linkleri gorunmez, gerisi calisir
   db.collection('trackers').doc(email).collection('applications').onSnapshot(snap => {
     apps = {}; snap.forEach(d => apps[d.id] = d.data()); render();
   }, e => toast('Durumlar okunamadı: ' + (e.code || e.message)));

@@ -113,3 +113,19 @@ Panoda (giriş yapınca) Yeni sekmesindeki her ilanda **🤖 Claude ile başvur*
 kurallar) yapıştırılır, sonra bu komut. Claude formu profille doldurur, CV / ön yazı yüklemesinde ve profilde olmayan
 sorularda kişiye sorar, şifre / CAPTCHA / onay kutularına dokunmaz ve son "Gönder" adımından önce durur.
 Başvuru asistanı dosyası kişisel bilgi içerdiği için bu repoda tutulmaz.
+
+## CV / ön yazı belgeleri panoda (Supabase Storage)
+
+Her gece üretilen CV ve ön yazı PDF'leri gizli bir Supabase bucket'ına (`applications`) yüklenir. Panoda giriş yapan
+kişi kendi belgelerinin linklerini görür (📄 CV, 📄 Ön yazı). Linkler 180 gün geçerlidir ve Firestore'da
+`trackers/{e-posta}/documents/{ilan}` altında, sadece o kişinin okuyabileceği yerde durur.
+
+Bir kerelik kurulum:
+1. supabase.com → **New project** (örn. `internship-docs`, bölge: Frankfurt). Veritabanı şifresini bir yere kaydet.
+2. Proje → **Project Settings → API Keys**: **Secret key**'i kopyala (`sb_secret_...`; sadece eski anahtarlar
+   görünüyorsa `service_role`). **Project URL**'i de kopyala (`https://<proje>.supabase.co`).
+3. GitHub → repo → Settings → Secrets and variables → Actions → iki secret ekle:
+   `SUPABASE_URL` = Project URL, `SUPABASE_SECRET_KEY` = secret key. (Bu anahtar her şeye erişir; başka yere yazma.)
+4. Firebase Console → Firestore Database → **Rules** → repodaki `firestore.rules`'u yapıştır → **Publish**
+   (belge linkleri için yeni kural var).
+Bucket ilk çalıştırmada otomatik oluşturulur. Secret'lar yoksa bu adım atlanır; CV'ler yine Telegram'a gider.
