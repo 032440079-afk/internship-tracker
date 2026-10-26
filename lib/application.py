@@ -266,6 +266,18 @@ def _slug(s: str, default: str = "Company") -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_")[:40] or default
 
 
+def _position_slug(title: str, words: int = 4) -> str:
+    """Ilan basligindan dosya adina kisa pozisyon: "Praktikum im Bereich Supply Chain (m/w/d)" -> "Praktikum_im_Bereich_Supply"."""
+    title = re.sub(r"\((?:[mwfdx]|div)[^)]*\)", " ", title or "", flags=re.I)  # (m/w/d), (f/m/div.) ...
+    out = ""
+    for w in re.findall(r"[^\W_]+", title)[:words]:  # 40 karakteri asmadan, kelime ortasindan kesmeden
+        part = _slug(w, default="")
+        if part and len(out) + len(part) + 1 > 40:
+            break
+        out = f"{out}_{part}" if out and part else out or part
+    return out
+
+
 def build_application(offer: dict, job_text: str, profile: int = 0) -> dict:
     """profile'in ana CV'sinden {"cv": pdf_yolu, "cover_letter": pdf_yolu (yoksa None), "changes": int, ...} dondurur."""
     cv_path, note = PROFILES[profile]["cv"], PROFILES[profile]["note"]
@@ -277,10 +289,12 @@ def build_application(offer: dict, job_text: str, profile: int = 0) -> dict:
     outdir = tempfile.mkdtemp(prefix="application_")
     company = _slug(offer.get("company"))
     person = _slug(_name_and_contact(master)[0], default="Applicant")
+    position = _position_slug(offer.get("title", ""))
+    suffix = f"{company}_{position}" if position else company  # ayni sirketin ilanlari indirince karismasin
 
     doc = Document(cv_path)
     changes = _build_cv(doc, parts, answer, cv_text.lower())
-    cv_docx = os.path.join(outdir, f"{person}_CV_{company}.docx")
+    cv_docx = os.path.join(outdir, f"{person}_CV_{suffix}.docx")
     doc.save(cv_docx)
     result = {"cv": _to_pdf(cv_docx, outdir), "cover_letter": None, "changes": changes,
               "match": _match_score(answer.get("requirements"))}
@@ -289,7 +303,7 @@ def build_application(offer: dict, job_text: str, profile: int = 0) -> dict:
     letter, removed = _clean_letter(answer.get("cover_letter") or [], letter_corpus)
     result["letter_sentences_removed"] = removed
     if len(letter) >= 2:
-        cl_docx = os.path.join(outdir, f"{person}_Cover_Letter_{company}.docx")
+        cl_docx = os.path.join(outdir, f"{person}_Cover_Letter_{suffix}.docx")
         _build_cover_letter(master, letter, offer, cl_docx)
         result["cover_letter"] = _to_pdf(cl_docx, outdir)
     return result
