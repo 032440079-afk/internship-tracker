@@ -145,6 +145,18 @@ def applications(email: str) -> list[dict]:
     return [d.to_dict() for d in _db.collection("trackers").document(email).collection("applications").stream()]
 
 
+def document_ids(email: str) -> set[str]:
+    """Kisinin belge linki olan ilanlari."""
+    _init()
+    return {d.id for d in _db.collection("trackers").document(email).collection("documents").stream()}
+
+
+def all_offers() -> list[tuple[str, dict]]:
+    """Tum kayitli ilanlar (en yeni bulunan once)."""
+    _init()
+    return [(d.id, d.to_dict()) for d in _db.collection("offers").order_by("scrapedAt", direction="DESCENDING").stream()]
+
+
 def save_documents(email: str, doc_id: str, links: dict):
     """Kisinin bu ilan icin uretilen CV / on yazi indirme linkleri (Supabase). Sadece o kisi okuyabilir (firestore.rules)."""
     _init()

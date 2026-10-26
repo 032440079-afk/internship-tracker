@@ -75,14 +75,15 @@ def _non_europe_but_relevant(offer: dict, source_key: str) -> bool:
             and is_relevant(offer.get("title", ""), offer.get("description", ""), "")[0])
 
 
-def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[str]]]):
-    """Ilana gore her kisi icin kendi CV'sinden CV + on yazi uretip kendi sohbetine gonderir.
-    Icerik loglanmaz (Actions loglari herkese acik)."""
+def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[str]]], telegram: bool = True):
+    """Ilana gore her kisi icin kendi CV'sinden CV + on yazi uretip kendi sohbetine gonderir (telegram=False: sadece
+    panoya yukler; eski ilanlarin belgeleri icin). Icerik loglanmaz (Actions loglari herkese acik)."""
     for profile, chats in targets:
         try:
             files = application.build_application(offer, job_text, profile)
             paths = [files["cv"]] + ([files["cover_letter"]] if files["cover_letter"] else [])
-            notify.send_application_files(offer, paths, files["match"], chats)
+            if telegram:
+                notify.send_application_files(offer, paths, files["match"], chats)
             if files["match"]:
                 store.save_match(store.url_hash(offer["url"]), files["match"], profile)
             stored = _store_documents(offer, files, profile)
@@ -92,6 +93,37 @@ def _send_application(offer: dict, job_text: str, targets: list[tuple[int, list[
                   f" ilan metni: {len(job_text)} karakter){stored}")
         except Exception as e:
             print(f"    [CV-HATA {profile + 1}] {type(e).__name__}")
+
+
+def _backfill_documents(targets: list[tuple[int, list[str]]]):
+    """Panoda acik olup Supabase'te belgesi olmayan eski ilanlar icin CV / on yazi uretir ve sadece panoya yukler
+    (Telegram'a tekrar gonderilmez). En yeni ilandan baslar, her calismada en fazla BACKFILL_PER_RUN ilan."""
+    if not documents.enabled() or not targets or config.BACKFILL_PER_RUN <= 0:
+        return
+    try:
+        have = {p: store.document_ids(config.ALLOWED_EMAILS[p]) for p, _ in targets if p < len(config.ALLOWED_EMAILS)}
+        offers = [(i, d) for i, d in store.all_offers() if d.get("url") and export_html.is_visible(d)
+                  and not export_html.is_stale(d)]
+    except Exception as e:
+        print(f"[HATA] eski ilan belgeleri hazirlanamadi: {type(e).__name__}")
+        return
+    day = lambda d: d.get("postedDate") or (d["scrapedAt"].date().isoformat() if d.get("scrapedAt") else "")
+    offers.sort(key=lambda x: day(x[1]), reverse=True)
+    todo = []
+    for doc_id, d in offers:
+        missing = [(p, chats) for p, chats in targets if p in have and doc_id not in have[p]]
+        if missing:
+            todo.append((d, missing))
+    left = len(todo) - min(len(todo), config.BACKFILL_PER_RUN)
+    todo = todo[:config.BACKFILL_PER_RUN]
+    if not todo:
+        return
+    print(f"\n=== eski ilanlarin belgeleri: {len(todo)} ilan (sonraki calismalara {left} ilan kaldi) ===")
+    with JobPageReader() as reader:
+        for d, missing in todo:
+            offer = {k: d.get(k, "") for k in ("title", "company", "location", "url")}
+            print(f"  [BELGE] {offer['title']} — {offer['company']}")
+            _send_application(offer, _read_job_text(reader, offer["url"]), missing, telegram=False)
 
 
 def _store_documents(offer: dict, files: dict, profile: int) -> str:
@@ -245,6 +277,9 @@ def run(dry_run: bool = False, only_source: str | None = None):
 
     if ineligible:
         notify.send_ineligible_summary(ineligible)
+
+    if make_applications and not only_source:
+        _backfill_documents(cv_targets)
 
     if not dry_run and datetime.now().weekday() == 0:  # pazartesi: herkese kendi haftalik basvuru ozeti
         try:
