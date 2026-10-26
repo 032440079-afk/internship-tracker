@@ -20,6 +20,19 @@ STALE_SOURCES = {"company_successfactors", "company_workday", "company_smartrecr
                  "company_amazon", "company_continental"}
 
 
+def is_visible(d: dict) -> bool:
+    """Sonradan eklenen filtreleri (Avrupa disi, alan disi, Werkstudent, sinif sarti...) eski kayitlara da uygular."""
+    return is_europe_location(d.get("location", "")) and not is_non_internship_role(d.get("title", "")) \
+        and not has_excluded_keyword(d.get("title", "")) and d.get("eligible") is not False
+
+
+def is_stale(d: dict, stale_before: datetime | None = None) -> bool:
+    """Tum listesini gezen bir kaynakta STALE_DAYS gundur gorulmeyen ilan."""
+    stale_before = stale_before or datetime.now(timezone.utc) - timedelta(days=STALE_DAYS)
+    last_seen = max((t for t in (d.get("scrapedAt"), d.get("lastSeen")) if t), default=None)
+    return bool(last_seen and last_seen < stale_before and d.get("source") in STALE_SOURCES)
+
+
 def _fetch_all_offers() -> list[dict]:
     store._init()
     docs = store._db.collection("offers").order_by("scrapedAt", direction="DESCENDING").stream()
@@ -28,9 +41,7 @@ def _fetch_all_offers() -> list[dict]:
     for doc in docs:
         d = doc.to_dict()
         scraped = d.get("scrapedAt")
-        # Sonradan eklenen filtreleri (Avrupa disi, alan disi, Werkstudent...) eski kayitlara da uygula
-        if not is_europe_location(d.get("location", "")) or is_non_internship_role(d.get("title", "")) \
-                or has_excluded_keyword(d.get("title", "")) or d.get("eligible") is False:
+        if not is_visible(d):
             continue
         offers.append({
             "id": doc.id,
@@ -39,8 +50,7 @@ def _fetch_all_offers() -> list[dict]:
             "url": d.get("url", ""), "scrapedAt": scraped.isoformat() if scraped else "",
             "postedDate": d.get("postedDate") or "", "postedApprox": bool(d.get("postedApprox")),
         })
-        last_seen = max((t for t in (scraped, d.get("lastSeen")) if t), default=None)
-        if last_seen and last_seen < stale_before and d.get("source") in STALE_SOURCES:
+        if is_stale(d, stale_before):
             offers[-1]["stale"] = True
     return offers
 

@@ -24,6 +24,8 @@ TELEGRAM_CV_CHAT_IDS = [
 ALLOWED_EMAILS = [e.strip().lower() for e in os.environ.get("ALLOWED_EMAILS", "").split(",") if e.strip()]
 # Bir calismada en fazla kac ilan icin CV + on yazi uretilecegi (calisma suresini sinirlamak icin)
 MAX_APPLICATIONS_PER_RUN = int(os.environ.get("MAX_APPLICATIONS_PER_RUN", "80"))
+# Belgesi (Supabase'te CV / on yazi) olmayan eski acik ilanlardan her calismada en fazla kac tanesi icin uretilecegi
+BACKFILL_PER_RUN = int(os.environ.get("BACKFILL_PER_RUN", "80"))
 
 # Alakalı ilanları filtrelemek için anahtar kelimeler (küçük harfe çevrilip aranır)
 RELEVANT_KEYWORDS = [
