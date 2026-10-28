@@ -75,16 +75,18 @@ jobs:
           git add docs/index.html
           git diff --staged --quiet || (git commit -m "Update dashboard" && git push origin HEAD:main)
 
+      # Hata verirse calisma kirmizi gorunsun (dashboard zaten bir onceki adimda commit edildi)
       - name: Firebase Hosting'e deploy et
         if: success()
-        continue-on-error: true
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
           echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /tmp/firebase-sa.json
           export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json
           PROJECT_ID=$(python3 -c "import json;print(json.load(open('/tmp/firebase-sa.json'))['project_id'])")
-          npm install -g firebase-tools
+          # 15.34.1+ deploy'dan once Service Usage API'ye soruyor; servis hesabinin o yetkisi yok (HTTP 403).
+          # Hesaba "Service Usage Consumer" rolu verilirse surum sabitlemesi kaldirilabilir.
+          npm install -g firebase-tools@15.34.0
           firebase deploy --only hosting --project "$PROJECT_ID" --non-interactive
           # Not: firestore.rules buradan yuklenmiyor (servis hesabinin yetkisi yok); Firebase Console'dan
           # bir kez elle yayinlanir, bkz. SETUP.md
