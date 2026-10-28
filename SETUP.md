@@ -10,6 +10,10 @@ bilgisi/parola içeriyorlar.
 2. Sol menüden **Build > Firestore Database** → "Create database" → production mode, bölge olarak `eur3` (Avrupa) seç
 3. Sol üstten ⚙️ (Project settings) → **Service accounts** sekmesi → "Generate new private key"
    → bir `.json` dosyası inecek. **Bu dosyayı kimseyle paylaşma, bana da gösterme.**
+4. Aynı sayfadaki `firebase-adminsdk-…` e-postasını kopyala. Firebase'deki **Users and permissions** sekmesinin
+   altındaki "Advanced permission settings" linkiyle Google Cloud IAM'i aç. O hesabın satırında ✏️ → **Add another
+   role** → **Service Usage Consumer** → Save. Bu rol olmadan güncel `firebase-tools` panoyu yüklerken 403 hatası
+   verir.
 
 ## 2. Telegram Bot Oluştur
 
