@@ -17,7 +17,9 @@ concurrency:
 
 jobs:
   scrape:
-    runs-on: ubuntu-latest
+    # ubuntu-latest 2026-10'da Ubuntu 26.04'e gecti; Playwright 1.55 o surumde Chromium kuramiyor ("does not support
+    # chromium on ubuntu26.04-x64"). Playwright guncellenene kadar 24.04'e sabit.
+    runs-on: ubuntu-24.04
     env:
       CV_KEY: ${{ secrets.CV_KEY }}   # sifreli ana CV'leri acmak icin; bos ise CV uretimi kapali
     steps:
